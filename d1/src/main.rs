@@ -40,6 +40,7 @@ fn main() -> Result<()> {
 
     println!("Task 1: {}", task1(&v1, &v2));
     println!("Task 2: {}", task2(&v1, &v2));
+    println!("Hi");
 
     Ok(())
 }
