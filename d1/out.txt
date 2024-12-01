@@ -1,0 +1,276 @@
+   Compiling d1 v0.1.0 (/Users/astadnik/misc/advents_2024/d1)
+warning: unused imports: `collections::HashMap` and `iter::zip`
+ --> src/main.rs:2:11
+  |
+2 | use std::{collections::HashMap, fs::read_to_string, iter::zip};
+  |           ^^^^^^^^^^^^^^^^^^^^                      ^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+error[E0277]: the trait bound `String: Stream` is not satisfied
+   --> src/main.rs:19:16
+    |
+19  |     let text = repeat(.., separated_pair(dec_uint, space1, dec_uint))
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `Stream` is not implemented for `String`
+    |
+    = help: the trait `Stream` is implemented for `&str`
+note: required by a bound in `winnow::combinator::repeat`
+   --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/combinator/multi.rs:116:12
+    |
+111 | pub fn repeat<Input, Output, Accumulator, Error, ParseNext>(
+    |        ------ required by a bound in this function
+...
+116 |     Input: Stream,
+    |            ^^^^^^ required by this bound in `repeat`
+
+error[E0277]: the trait bound `String: Stream` is not satisfied
+   --> src/main.rs:19:60
+    |
+19  |     let text = repeat(.., separated_pair(dec_uint, space1, dec_uint))
+    |                           --------------                   ^^^^^^^^ the trait `Stream` is not implemented for `String`, which is required by `for<'a> fn(&'a mut _) -> Result<_, ErrMode<_>> {dec_uint::<_, _, _>}: Parser<_, _, _>`
+    |                           |
+    |                           required by a bound introduced by this call
+    |
+    = help: the trait `Stream` is implemented for `&str`
+    = note: required for `for<'a> fn(&'a mut String) -> Result<_, ErrMode<_>> {dec_uint::<String, _, _>}` to implement `Parser<String, _, _>`
+note: required by a bound in `separated_pair`
+   --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/combinator/sequence.rs:110:9
+    |
+100 | pub fn separated_pair<Input, O1, Sep, O2, Error, P1, SepParser, P2>(
+    |        -------------- required by a bound in this function
+...
+110 |     P2: Parser<Input, O2, Error>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `separated_pair`
+
+error[E0277]: the trait bound `String: StreamIsPartial` is not satisfied
+    --> src/main.rs:19:42
+     |
+19   |     let text = repeat(.., separated_pair(dec_uint, space1, dec_uint))
+     |                                          ^^^^^^^^ the trait `StreamIsPartial` is not implemented for `String`
+     |
+     = help: the trait `StreamIsPartial` is implemented for `&str`
+note: required by a bound in `dec_uint`
+    --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/ascii/mod.rs:1127:12
+     |
+1125 | pub fn dec_uint<Input, Output, Error>(input: &mut Input) -> PResult<Output, Error>
+     |        -------- required by a bound in this function
+1126 | where
+1127 |     Input: StreamIsPartial + Stream,
+     |            ^^^^^^^^^^^^^^^ required by this bound in `dec_uint`
+
+error[E0277]: the trait bound `String: StreamIsPartial` is not satisfied
+   --> src/main.rs:19:52
+    |
+19  |     let text = repeat(.., separated_pair(dec_uint, space1, dec_uint))
+    |                                                    ^^^^^^ the trait `StreamIsPartial` is not implemented for `String`
+    |
+    = help: the trait `StreamIsPartial` is implemented for `&str`
+note: required by a bound in `space1`
+   --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/ascii/mod.rs:991:12
+    |
+989 | pub fn space1<Input, Error>(input: &mut Input) -> PResult<<Input as Stream>::Slice, Error>
+    |        ------ required by a bound in this function
+990 | where
+991 |     Input: StreamIsPartial + Stream,
+    |            ^^^^^^^^^^^^^^^ required by this bound in `space1`
+
+error[E0277]: the trait bound `String: Stream` is not satisfied
+   --> src/main.rs:19:42
+    |
+19  |     let text = repeat(.., separated_pair(dec_uint, space1, dec_uint))
+    |                           -------------- ^^^^^^^^ the trait `Stream` is not implemented for `String`, which is required by `for<'a> fn(&'a mut _) -> Result<_, ErrMode<_>> {dec_uint::<_, _, _>}: Parser<_, _, _>`
+    |                           |
+    |                           required by a bound introduced by this call
+    |
+    = help: the trait `Stream` is implemented for `&str`
+    = note: required for `for<'a> fn(&'a mut String) -> Result<_, ErrMode<_>> {dec_uint::<String, _, _>}` to implement `Parser<String, _, _>`
+note: required by a bound in `separated_pair`
+   --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/combinator/sequence.rs:108:9
+    |
+100 | pub fn separated_pair<Input, O1, Sep, O2, Error, P1, SepParser, P2>(
+    |        -------------- required by a bound in this function
+...
+108 |     P1: Parser<Input, O1, Error>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `separated_pair`
+
+error[E0277]: the trait bound `String: StreamIsPartial` is not satisfied
+    --> src/main.rs:19:60
+     |
+19   |     let text = repeat(.., separated_pair(dec_uint, space1, dec_uint))
+     |                                                            ^^^^^^^^ the trait `StreamIsPartial` is not implemented for `String`
+     |
+     = help: the trait `StreamIsPartial` is implemented for `&str`
+note: required by a bound in `dec_uint`
+    --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/ascii/mod.rs:1127:12
+     |
+1125 | pub fn dec_uint<Input, Output, Error>(input: &mut Input) -> PResult<Output, Error>
+     |        -------- required by a bound in this function
+1126 | where
+1127 |     Input: StreamIsPartial + Stream,
+     |            ^^^^^^^^^^^^^^^ required by this bound in `dec_uint`
+
+error[E0277]: the trait bound `String: Stream` is not satisfied
+   --> src/main.rs:19:52
+    |
+19  |     let text = repeat(.., separated_pair(dec_uint, space1, dec_uint))
+    |                           --------------           ^^^^^^ the trait `Stream` is not implemented for `String`, which is required by `for<'a> fn(&'a mut _) -> Result<<_ as Stream>::Slice, ErrMode<_>> {space1::<_, _>}: Parser<_, _, _>`
+    |                           |
+    |                           required by a bound introduced by this call
+    |
+    = help: the trait `Stream` is implemented for `&str`
+    = note: required for `for<'a> fn(&'a mut String) -> Result<<String as Stream>::Slice, ErrMode<_>> {space1::<String, _>}` to implement `Parser<String, _, _>`
+note: required by a bound in `separated_pair`
+   --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/combinator/sequence.rs:109:16
+    |
+100 | pub fn separated_pair<Input, O1, Sep, O2, Error, P1, SepParser, P2>(
+    |        -------------- required by a bound in this function
+...
+109 |     SepParser: Parser<Input, Sep, Error>,
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `separated_pair`
+
+error[E0277]: the trait bound `String: Offset<_>` is not satisfied
+   --> src/main.rs:19:27
+    |
+19  |     let text = repeat(.., separated_pair(dec_uint, space1, dec_uint))
+    |                           ^^^^^^^^^^^^^^ the trait `Offset<_>` is not implemented for `String`
+    |
+    = help: the following other types implement trait `Offset<Start>`:
+              `&str` implements `Offset<Checkpoint<&str, &str>>`
+              `&str` implements `Offset`
+note: required by a bound in `Stream`
+   --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/stream/mod.rs:627:19
+    |
+627 | pub trait Stream: Offset<<Self as Stream>::Checkpoint> + crate::lib::std::fmt::Debug {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Stream`
+
+error[E0277]: the trait bound `String: StreamIsPartial` is not satisfied
+    --> src/main.rs:19:27
+     |
+19   |     let text = repeat(.., separated_pair(dec_uint, space1, dec_uint))
+     |                           ^^^^^^^^^^^^^^ the trait `StreamIsPartial` is not implemented for `String`
+     |
+     = help: the trait `StreamIsPartial` is implemented for `&str`
+note: required by a bound in `dec_uint`
+    --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/ascii/mod.rs:1127:12
+     |
+1125 | pub fn dec_uint<Input, Output, Error>(input: &mut Input) -> PResult<Output, Error>
+     |        -------- required by a bound in this function
+1126 | where
+1127 |     Input: StreamIsPartial + Stream,
+     |            ^^^^^^^^^^^^^^^ required by this bound in `dec_uint`
+
+error[E0277]: the trait bound `String: Offset<_>` is not satisfied
+   --> src/main.rs:19:27
+    |
+19  |     let text = repeat(.., separated_pair(dec_uint, space1, dec_uint))
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `Offset<_>` is not implemented for `String`
+    |
+    = help: the following other types implement trait `Offset<Start>`:
+              `&str` implements `Offset<Checkpoint<&str, &str>>`
+              `&str` implements `Offset`
+note: required by a bound in `Stream`
+   --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/stream/mod.rs:627:19
+    |
+627 | pub trait Stream: Offset<<Self as Stream>::Checkpoint> + crate::lib::std::fmt::Debug {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Stream`
+
+error[E0277]: the trait bound `String: Offset<_>` is not satisfied
+   --> src/main.rs:19:16
+    |
+19  |     let text = repeat(.., separated_pair(dec_uint, space1, dec_uint))
+    |                ^^^^^^ the trait `Offset<_>` is not implemented for `String`
+    |
+    = help: the following other types implement trait `Offset<Start>`:
+              `&str` implements `Offset<Checkpoint<&str, &str>>`
+              `&str` implements `Offset`
+note: required by a bound in `Stream`
+   --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/stream/mod.rs:627:19
+    |
+627 | pub trait Stream: Offset<<Self as Stream>::Checkpoint> + crate::lib::std::fmt::Debug {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Stream`
+
+error[E0277]: the trait bound `String: Stream` is not satisfied
+  --> src/main.rs:20:16
+   |
+20 |         .parse(read_to_string("input.txt")?)
+   |          ----- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `Stream` is not implemented for `String`
+   |          |
+   |          required by a bound introduced by this call
+   |
+   = help: the trait `Stream` is implemented for `&str`
+note: required by a bound in `parse`
+  --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/parser.rs:54:12
+   |
+51 |     fn parse(&mut self, mut input: I) -> Result<O, ParseError<I, E>>
+   |        ----- required by a bound in this associated function
+...
+54 |         I: Stream,
+   |            ^^^^^^ required by this bound in `Parser::parse`
+
+error[E0277]: the trait bound `String: StreamIsPartial` is not satisfied
+  --> src/main.rs:20:16
+   |
+20 |         .parse(read_to_string("input.txt")?)
+   |          ----- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `StreamIsPartial` is not implemented for `String`
+   |          |
+   |          required by a bound introduced by this call
+   |
+   = help: the trait `StreamIsPartial` is implemented for `&str`
+note: required by a bound in `parse`
+  --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/parser.rs:56:12
+   |
+51 |     fn parse(&mut self, mut input: I) -> Result<O, ParseError<I, E>>
+   |        ----- required by a bound in this associated function
+...
+56 |         I: StreamIsPartial,
+   |            ^^^^^^^^^^^^^^^ required by this bound in `Parser::parse`
+
+error[E0277]: the trait bound `String: Offset<_>` is not satisfied
+   --> src/main.rs:20:10
+    |
+20  |         .parse(read_to_string("input.txt")?)
+    |          ^^^^^ the trait `Offset<_>` is not implemented for `String`
+    |
+    = help: the following other types implement trait `Offset<Start>`:
+              `&str` implements `Offset<Checkpoint<&str, &str>>`
+              `&str` implements `Offset`
+note: required by a bound in `Stream`
+   --> /Users/astadnik/.cargo/registry/src/index.crates.io-6f17d22bba15001f/winnow-0.6.20/src/stream/mod.rs:627:19
+    |
+627 | pub trait Stream: Offset<<Self as Stream>::Checkpoint> + crate::lib::std::fmt::Debug {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Stream`
+
+error[E0277]: the trait bound `String: AsBStr` is not satisfied
+   --> src/main.rs:21:72
+    |
+21  |         .map_err(|e: ParseError<_, ContextError>| anyhow::format_err!("{e}"))?;
+    |                                                                        ^^^ the trait `AsBStr` is not implemented for `String`, which is required by `ParseError<String, ContextError>: std::fmt::Display`
+    |
+    = help: the trait `AsBStr` is implemented for `&str`
+    = note: required for `ParseError<String, ContextError>` to implement `std::fmt::Display`
+note: required by a bound in `core::fmt::rt::Argument::<'a>::new_display`
+   --> /Users/astadnik/.local/share/rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/fmt/rt.rs:113:31
+    |
+113 |     pub fn new_display<'b, T: Display>(x: &'b T) -> Argument<'b> {
+    |                               ^^^^^^^ required by this bound in `Argument::<'a>::new_display`
+    = note: this error originates in the macro `$crate::__private::format_args` which comes from the expansion of the macro `anyhow::format_err` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: this function depends on never type fallback being `()`
+  --> src/main.rs:10:1
+   |
+10 | fn main() -> Result<()> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #123748 <https://github.com/rust-lang/rust/issues/123748>
+   = help: specify the types explicitly
+note: in edition 2024, the requirement `!: Accumulate<(_, _)>` will fail
+  --> src/main.rs:19:16
+   |
+19 |     let text = repeat(.., separated_pair(dec_uint, space1, dec_uint))
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = note: `#[warn(dependency_on_unit_never_type_fallback)]` on by default
+
+For more information about this error, try `rustc --explain E0277`.
+warning: `d1` (bin "d1") generated 2 warnings
+error: could not compile `d1` (bin "d1") due to 15 previous errors; 2 warnings emitted
