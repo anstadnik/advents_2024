@@ -7,8 +7,8 @@ use winnow::{
     Parser,
 };
 
-fn main() -> Result<()> {
-    let (mut v1, mut v2) = read_to_string("input.txt")?
+fn parse_input(input: &str) -> Result<(Vec<u32>, Vec<u32>)> {
+    let (mut v1, mut v2) = input
         .lines()
         .map(|l| -> Result<(u32, u32)> {
             separated_pair(dec_uint, space1, dec_uint)
@@ -19,21 +19,37 @@ fn main() -> Result<()> {
 
     v1.sort_unstable();
     v2.sort_unstable();
+    Ok((v1, v2))
+}
 
-    let dist = zip(&v1, &v2).map(|(&a, &b)| a.abs_diff(b)).sum::<u32>();
-    println!("Distance: {dist}");
+fn task1(v1: &Vec<u32>, v2: &Vec<u32>) -> u32 {
+    zip(v1, v2).map(|(&a, &b)| a.abs_diff(b)).sum::<u32>()
+}
 
-    let counts = v2.into_iter().fold(HashMap::new(), |mut acc, v| {
+fn task2(v1: &[u32], v2: &[u32]) -> u32 {
+    let counts = v2.iter().fold(HashMap::new(), |mut acc, v| {
         *acc.entry(v).or_insert(0) += 1;
         acc
     });
 
-    let dist2 = v1
-        .into_iter()
-        .map(|n| n * counts.get(&n).unwrap_or(&0))
-        .sum::<u32>();
+    v1.iter().map(|n| n * counts.get(&n).unwrap_or(&0)).sum()
+}
 
-    println!("Distance 2: {dist2}");
+fn main() -> Result<()> {
+    let (v1, v2) = parse_input(&read_to_string("input.txt")?)?;
+
+    println!("Task 1: {}", task1(&v1, &v2));
+    println!("Task 2: {}", task2(&v1, &v2));
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_main() -> Result<()> {
+        main()
+    }
 }
