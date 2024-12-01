@@ -32,9 +32,7 @@ fn task2(v1: &[u32], v2: &[u32]) -> u32 {
         acc
     });
 
-    v1.iter()
-        .map(|n| n * counts.get(&n).unwrap_or(&0))
-        .sum()
+    v1.iter().map(|n| n * counts.get(&n).unwrap_or(&0)).sum()
 }
 
 fn main() -> Result<()> {
