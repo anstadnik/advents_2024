@@ -1,4 +1,6 @@
 use anyhow::Result;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::str::ParallelString;
 use std::{collections::HashMap, fs::read_to_string, iter::zip};
 use winnow::{
     ascii::{dec_uint, space1},
@@ -9,7 +11,7 @@ use winnow::{
 
 fn parse_input(input: &str) -> Result<(Vec<u32>, Vec<u32>)> {
     let (mut v1, mut v2) = input
-        .lines()
+        .par_lines()
         .map(|l| -> Result<(u32, u32)> {
             separated_pair(dec_uint, space1, dec_uint)
                 .parse(l)
@@ -32,7 +34,9 @@ fn task2(v1: &[u32], v2: &[u32]) -> u32 {
         acc
     });
 
-    v1.iter().map(|n| n * counts.get(&n).unwrap_or(&0)).sum()
+    v1.par_iter()
+        .map(|n| n * counts.get(&n).unwrap_or(&0))
+        .sum()
 }
 
 fn main() -> Result<()> {
@@ -40,7 +44,6 @@ fn main() -> Result<()> {
 
     println!("Task 1: {}", task1(&v1, &v2));
     println!("Task 2: {}", task2(&v1, &v2));
-    println!("Hi");
 
     Ok(())
 }
