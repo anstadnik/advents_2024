@@ -2,49 +2,21 @@ use anyhow::Result;
 use regex::Regex;
 use std::fs::read_to_string;
 
-#[derive(Debug)]
-enum Instuction {
-    Mult(u32, u32),
-    Do,
-    Dont,
-}
-
-use Instuction::*;
-
 fn parse_input<const IGNORE_CONDITIONALS: bool>(line: &str) -> Result<u32> {
-    let re = Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)")?;
-    let mults = re.captures_iter(line).map(|c| {
-        Ok((
-            c.get(0).unwrap().start(),
-            Mult(c[1].parse::<u32>()?, c[2].parse::<u32>()?),
-        ))
-    });
-
-    let re = Regex::new(r"do\(\)")?;
-    let dos = re
+    Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)|do\(\)|don't\(\)")?
         .captures_iter(line)
-        .map(|c| Ok((c.get(0).unwrap().start(), Do)));
-
-    let re = Regex::new(r"don't\(\)")?;
-    let donts = re
-        .captures_iter(line)
-        .map(|c| Ok((c.get(0).unwrap().start(), Dont)));
-
-    let mut instructions = mults.chain(dos).chain(donts).collect::<Result<Vec<_>>>()?;
-    instructions.sort_unstable_by_key(|(i, _)| *i);
-
-    let mut enabled = true;
-    let mut sum = 0;
-    for (_, instruction) in instructions {
-        match instruction {
-            Mult(a, b) if enabled || IGNORE_CONDITIONALS => sum += a * b,
-            Do => enabled = true,
-            Dont => enabled = false,
-            _ => (),
-        }
-    }
-
-    Ok(sum)
+        .try_fold((true, 0), |(enabled, sum), capture| {
+            Ok(match &capture[0] {
+                "do()" => (true, sum),
+                "don't()" => (false, sum),
+                _ if enabled || IGNORE_CONDITIONALS => (
+                    enabled,
+                    sum + capture[1].parse::<u32>()? * capture[2].parse::<u32>()?,
+                ),
+                _ => (enabled, sum),
+            })
+        })
+        .map(|(_, sum)| sum)
 }
 
 fn main() -> Result<()> {
