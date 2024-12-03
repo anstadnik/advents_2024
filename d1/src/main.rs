@@ -56,4 +56,20 @@ mod tests {
     fn test_main() -> Result<()> {
         main()
     }
+
+    #[test]
+    fn test_example() -> Result<()> {
+        let input = r"3   4
+4   3
+2   5
+1   3
+3   9
+3   3";
+        let (v1, v2) = parse_input(input)?;
+
+        assert_eq!(task1(&v1, &v2), 11);
+        assert_eq!(task2(&v1, &v2), 31);
+
+        Ok(())
+    }
 }
