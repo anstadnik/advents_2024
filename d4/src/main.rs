@@ -1,6 +1,6 @@
 use anyhow::Result;
 use itertools::Itertools;
-use std::{collections::HashMap, fs::read_to_string, iter::successors};
+use std::{fs::read_to_string, iter::successors};
 
 fn parse_data(s: &str) -> Result<Vec<Vec<char>>> {
     s.lines().map(|l| Ok(l.chars().collect())).collect()
@@ -34,18 +34,17 @@ fn task1(a: &[Vec<char>]) -> usize {
 }
 
 fn task2(a: &[Vec<char>]) -> usize {
-    let m: &HashMap<_, _> = &[('M', 'S'), ('S', 'M')].into();
+    let map = |c| match c {
+        'M' => Some('S'),
+        'S' => Some('M'),
+        _ => None,
+    };
+    let f = |r: usize, c: usize| {
+        let f = |dr: usize, dc| a[r + dr][c + dc];
+        Some((f(1, 1) == 'A' && map(f(0, 0))? == f(2, 2) && map(f(2, 0))? == f(0, 2)) as usize)
+    };
     (0..a.len() - 2)
-        .flat_map(|r| {
-            (0..a[0].len() - 2).filter_map(move |c| {
-                let get = |dr: usize, dc| a[r + dr][c + dc];
-                Some(
-                    (get(1, 1) == 'A'
-                        && *m.get(&get(0, 0))? == get(2, 2)
-                        && *m.get(&get(2, 0))? == get(0, 2)) as usize,
-                )
-            })
-        })
+        .flat_map(|r| (0..a[0].len() - 2).filter_map(move |c| f(r, c)))
         .sum()
 }
 
