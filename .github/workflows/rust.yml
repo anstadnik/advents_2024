@@ -16,10 +16,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    # - run: rustup toolchain install stable --profile minimal
     - uses: Swatinem/rust-cache@v2
-    # - uses: taiki-e/cache-cargo-install-action@v2
-    - uses: taiki-e/install-action@v2
-      with:
-        tool: nextest
+    - uses: taiki-e/install-action@nextest
     - run: cargo nextest run --release
