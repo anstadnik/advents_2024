@@ -13,12 +13,10 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    env:
-      CARGO_TERM_COLOR: always
 
     steps:
     - uses: actions/checkout@v4
     # - run: rustup toolchain install stable --profile minimal
     - uses: Swatinem/rust-cache@v2
-    - uses: taiki-e/install-action@nextest
+    - uses: taiki-e/cache-cargo-install-action@nextest
     - run: cargo nextest run --release
