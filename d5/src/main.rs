@@ -13,15 +13,19 @@ fn parse_updates(input: &mut &str) -> PResult<Vec<u32>> {
     separated(1.., dec_uint::<_, u32, _>, ",").parse_next(input)
 }
 
-fn cmp_rules(n1: u32, n2: u32, rules: &[(u32, u32)]) -> Ordering {
-    rules
-        .iter()
-        .find_map(|&(a, b)| match (n1, n2) {
+fn cmp_rules(rules: &[(u32, u32)]) -> impl Fn(&u32, &u32) -> Ordering + use<'_> {
+    |&n1, &n2| {
+        let f = |&(a, b)| match (n1, n2) {
             (a_, b_) if (a_, b_) == (a, b) => Some(Less),
             (a_, b_) if (a_, b_) == (b, a) => Some(Greater),
             _ => None,
-        })
-        .unwrap_or(Ordering::Equal)
+        };
+        rules.iter().find_map(f).unwrap_or(Ordering::Equal)
+    }
+}
+
+fn sorted_rules(rules: &[(u32, u32)]) -> impl Fn(&u32, &u32) -> bool + use<'_> {
+    |n1, n2| cmp_rules(rules)(n1, n2) != Greater
 }
 
 type Rules = Vec<(u32, u32)>;
@@ -45,19 +49,17 @@ fn parse_input(input: &str) -> Result<(Rules, Updates)> {
 fn task1(updates: &[Vec<u32>], rules: &[(u32, u32)]) -> u32 {
     updates
         .par_iter()
-        .filter_map(|u| {
-            u.is_sorted_by(|&n1, &n2| cmp_rules(n1, n2, rules) != Greater)
-                .then_some(u[u.len() / 2])
-        })
+        .filter(|u| u.is_sorted_by(sorted_rules(rules)))
+        .map(|u| u[u.len() / 2])
         .sum()
 }
 fn task2(updates: &[Vec<u32>], rules: &[(u32, u32)]) -> u32 {
     updates
         .par_iter()
-        .filter(|&u| !u.is_sorted_by(|&n1, &n2| cmp_rules(n1, n2, rules) != Greater))
+        .filter(|&u| !u.is_sorted_by(sorted_rules(rules)))
         .map(|u| {
             let mut u = u.clone();
-            u.sort_unstable_by(|&n1, &n2| cmp_rules(n1, n2, rules));
+            u.sort_unstable_by(cmp_rules(rules));
             u[u.len() / 2]
         })
         .sum()
