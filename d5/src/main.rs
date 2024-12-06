@@ -16,8 +16,8 @@ fn parse_updates(input: &mut &str) -> PResult<Vec<u32>> {
 fn cmp_rules(rules: &[(u32, u32)]) -> impl Fn(&u32, &u32) -> Ordering + use<'_> {
     |&n1, &n2| {
         let f = |&(a, b)| match (n1, n2) {
-            (a_, b_) if (a_, b_) == (a, b) => Some(Less),
-            (a_, b_) if (a_, b_) == (b, a) => Some(Greater),
+            t if t == (a, b) => Some(Less),
+            t if t == (b, a) => Some(Greater),
             _ => None,
         };
         rules.iter().find_map(f).unwrap_or(Ordering::Equal)
