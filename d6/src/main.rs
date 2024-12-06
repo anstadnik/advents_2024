@@ -70,10 +70,8 @@ fn parse_input(input: &str) -> Result<(Vec<Vec<char>>, Guard)> {
 }
 
 fn task1(grid: &[Vec<char>], mut guard: Guard) -> Option<HashSet<(usize, usize)>> {
-    let mut visited = HashSet::new();
     let mut history = HashSet::new();
     loop {
-        visited.insert(guard.pos);
         if !history.insert(guard) {
             return None;
         }
@@ -87,7 +85,7 @@ fn task1(grid: &[Vec<char>], mut guard: Guard) -> Option<HashSet<(usize, usize)>
             _ => unreachable!(),
         }
     }
-    Some(visited)
+    Some(history.into_iter().map(|guard| guard.pos).collect())
 }
 
 //fn task2_slow(grid: &[Vec<char>], guard: Guard) -> usize {
@@ -113,13 +111,12 @@ fn task1(grid: &[Vec<char>], mut guard: Guard) -> Option<HashSet<(usize, usize)>
 //}
 
 fn task2(grid: &[Vec<char>], guard: Guard) -> Result<usize> {
-    let visited = task1(grid, guard).ok_or(anyhow!("Got looped"))?;
-    let n = visited.len();
-    Ok(visited
+    let history = task1(grid, guard).ok_or(anyhow!("Got looped"))?;
+    let n = history.len();
+    Ok(history
         .into_par_iter()
         .progress_count(n as _)
         .filter(|&(i, j)| (i, j) != guard.pos)
-        .filter(|&(i, j)| grid[i][j] == '.')
         .filter(|&(i, j)| {
             let mut grid = grid.to_vec();
             grid[i][j] = '#';
