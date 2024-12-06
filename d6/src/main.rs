@@ -55,14 +55,11 @@ impl Guard {
 
 fn parse_input(input: &str) -> Result<(Vec<Vec<char>>, Guard)> {
     let mut grid: Vec<Vec<char>> = input.lines().map(|l| l.chars().collect()).collect();
+    let predicate = |&c| c == '^' || c == '>' || c == 'v' || c == '<';
     let pos = grid
         .iter()
         .enumerate()
-        .find_map(|(i, l)| {
-            l.iter()
-                .position(|&c| c == '^' || c == '>' || c == 'v' || c == '<')
-                .map(|j| (i, j))
-        })
+        .find_map(|(i, l)| l.iter().position(predicate).map(|j| (i, j)))
         .ok_or(anyhow!("Cannot find!"))?;
     let guard = Guard::new(pos, grid[pos.0][pos.1]);
     grid[guard.pos.0][guard.pos.1] = '.';
