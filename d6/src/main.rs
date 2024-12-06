@@ -69,7 +69,7 @@ fn parse_input(input: &str) -> Result<(Vec<Vec<char>>, Guard)> {
     Ok((grid, guard))
 }
 
-fn task1(grid: &[Vec<char>], mut guard: Guard) -> Option<usize> {
+fn task1(grid: &[Vec<char>], mut guard: Guard) -> Option<HashSet<(usize, usize)>> {
     let mut visited = HashSet::new();
     let mut history = HashSet::new();
     loop {
@@ -87,7 +87,7 @@ fn task1(grid: &[Vec<char>], mut guard: Guard) -> Option<usize> {
             _ => unreachable!(),
         }
     }
-    Some(visited.len())
+    Some(visited)
 }
 
 //fn task2_slow(grid: &[Vec<char>], guard: Guard) -> usize {
@@ -112,12 +112,12 @@ fn task1(grid: &[Vec<char>], mut guard: Guard) -> Option<usize> {
 //        .count()
 //}
 
-fn task2(grid: &[Vec<char>], guard: Guard) -> usize {
-    let (n, m) = (grid.len(), grid[0].len());
-    (0..n)
+fn task2(grid: &[Vec<char>], guard: Guard) -> Result<usize> {
+    let visited = task1(grid, guard).ok_or(anyhow!("Got looped"))?;
+    let n = visited.len();
+    Ok(visited
         .into_par_iter()
-        .progress()
-        .flat_map(|i| (0..m).into_par_iter().map(move |j| (i, j)))
+        .progress_count(n as _)
         .filter(|&(i, j)| (i, j) != guard.pos)
         .filter(|&(i, j)| grid[i][j] == '.')
         .filter(|&(i, j)| {
@@ -125,7 +125,7 @@ fn task2(grid: &[Vec<char>], guard: Guard) -> usize {
             grid[i][j] = '#';
             task1(&grid, guard).is_none()
         })
-        .count()
+        .count())
 }
 
 fn main() -> Result<()> {
@@ -133,9 +133,9 @@ fn main() -> Result<()> {
 
     println!(
         "Answer 1: {}",
-        task1(&grid, guard).ok_or(anyhow!("Got looped"))?
+        task1(&grid, guard).ok_or(anyhow!("Got looped"))?.len()
     );
-    println!("Answer 2: {}", task2(&grid, guard));
+    println!("Answer 2: {}", task2(&grid, guard)?);
 
     Ok(())
 }
@@ -163,8 +163,8 @@ mod tests {
 ......#...";
         let (grid, guard) = parse_input(input)?;
 
-        assert_eq!(task1(&grid, guard).ok_or(anyhow!("Get looped"))?, 41);
-        assert_eq!(task2(&grid, guard), 6);
+        assert_eq!(task1(&grid, guard).ok_or(anyhow!("Get looped"))?.len(), 41);
+        assert_eq!(task2(&grid, guard)?, 6);
 
         Ok(())
     }
