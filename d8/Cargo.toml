@@ -6,4 +6,4 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.94"
 itertools = "0.13.0"
-ndarray = "0.16.1"
+nalgebra = "0.33.2"

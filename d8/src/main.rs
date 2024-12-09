@@ -1,57 +1,40 @@
 use anyhow::Result;
 use itertools::Itertools;
-use std::{
-    collections::{HashMap, HashSet},
-    fs::read_to_string,
-};
+use nalgebra::{try_convert, Point2};
+use std::collections::{HashMap, HashSet};
+use std::fs::read_to_string;
 
 fn parse_input(input: &str) -> Vec<Vec<char>> {
     input.lines().map(|line| line.chars().collect()).collect()
 }
 
-fn task1<const TASK1: bool>(input: &[Vec<char>]) -> usize {
-    let locations = input
-        .iter()
-        .enumerate()
-        .flat_map(|(y, row)| row.iter().enumerate().map(move |(x, &c)| ((y, x), c)))
-        .fold(HashMap::<_, Vec<_>>::new(), |mut acc, (pos, c)| {
+fn task<const TASK2: bool>(input: &[Vec<char>]) -> usize {
+    let mut locations = HashMap::<char, Vec<Point2<isize>>>::new();
+    for (y, row) in input.iter().enumerate() {
+        for (x, &c) in row.iter().enumerate() {
             if c != '.' {
-                acc.entry(c).or_default().push(pos)
+                let p = Point2::new(y as isize, x as isize);
+                locations.entry(c).or_default().push(p);
             }
-            acc
-        });
+        }
+    }
 
-    let pred = |(y, x): (Option<usize>, Option<usize>)| input.get(y?)?.get(x?);
+    let pred = |p: Point2<isize>| {
+        let p_: Point2<usize> = try_convert(p)?;
+        input.get(p_.x)?.get(p_.y)?;
+        Some(p)
+    };
+
     locations
         .into_iter()
-        .flat_map(|(_, v)| v.into_iter().combinations(2))
-        .flat_map(|p| -> Box<dyn Iterator<Item = _>> {
-            let (a, b) = (p[0], p[1]);
-            let d = ((b.0 as isize - a.0 as isize), (b.1 as isize - a.1 as isize));
-            if TASK1 {
-                let a_ = (a.0.checked_add_signed(-d.0), a.1.checked_add_signed(-d.1));
-                let b_ = (b.0.checked_add_signed(d.0), b.1.checked_add_signed(d.1));
-                Box::new(
-                    [pred(a_).and(Some(a_)), pred(b_).and(Some(b_))]
-                        .into_iter()
-                        .flatten(),
-                )
+        .flat_map(|(_, v)| v.into_iter().combinations(2).map(|p| p.try_into().unwrap()))
+        .flat_map(|[a, b]: [_; 2]| -> Box<dyn Iterator<Item = _>> {
+            let d = b - a;
+            if !TASK2 {
+                Box::new([pred(a - d), pred(b + d)].into_iter().flatten())
             } else {
-                let a_it = (0..).map_while(move |n| {
-                    let a_ = (
-                        a.0.checked_add_signed(-d.0 * n),
-                        a.1.checked_add_signed(-d.1 * n),
-                    );
-                    pred(a_).and(Some(a_))
-                });
-                let b_it = (0..).map_while(move |n| {
-                    //let b_ = (b.0 as i32 + d.0 * n, b.1 as i32 + d.1 * n);
-                    let b_ = (
-                        b.0.checked_add_signed(d.0 * n),
-                        b.1.checked_add_signed(d.1 * n),
-                    );
-                    pred(b_).and(Some(b_))
-                });
+                let a_it = (0..).map_while(move |n| pred(a - d * n));
+                let b_it = (0..).map_while(move |n| pred(b + d * n));
                 Box::new(a_it.chain(b_it))
             }
         })
@@ -62,8 +45,8 @@ fn task1<const TASK1: bool>(input: &[Vec<char>]) -> usize {
 fn main() -> Result<()> {
     let input = parse_input(&read_to_string("input.txt")?);
 
-    println!("Answer 1: {}", task1::<true>(&input));
-    println!("Answer 2: {}", task1::<false>(&input));
+    println!("Answer 1: {}", task::<false>(&input));
+    println!("Answer 2: {}", task::<true>(&input));
 
     Ok(())
 }
@@ -72,31 +55,32 @@ fn main() -> Result<()> {
 mod tests {
     use super::*;
 
-    //#[test]
-    //fn test_main() -> Result<()> {
-    //    main()
-    //}
+    #[test]
+    fn test_main() -> Result<()> {
+        main()
+    }
 
-    //#[test]
-    //    fn test_example1() -> Result<()> {
-    //        let input = r"............
-    //........0...
-    //.....0......
-    //.......0....
-    //....0.......
-    //......A.....
-    //............
-    //............
-    //........A...
-    //.........A..
-    //............
-    //............";
-    //
-    //        let input = parse_input(input);
-    //        assert_eq!(task1(&input), 14);
-    //        //assert_eq!(task2(&input), 11387);
-    //        Ok(())
-    //    }
+    #[test]
+    fn test_example1() -> Result<()> {
+        let input = r"............
+........0...
+.....0......
+.......0....
+....0.......
+......A.....
+............
+............
+........A...
+.........A..
+............
+............";
+
+        let input = parse_input(input);
+        assert_eq!(task::<false>(&input), 14);
+        assert_eq!(task::<true>(&input), 34);
+
+        Ok(())
+    }
 
     #[test]
     fn test_example2() -> Result<()> {
@@ -112,8 +96,8 @@ mod tests {
 ..........";
 
         let input = parse_input(input);
-        assert_eq!(task1::<false>(&input), 2);
-        assert_eq!(task1::<true>(&input), 34);
+        assert_eq!(task::<false>(&input), 2);
+        assert_eq!(task::<true>(&input), 5);
 
         Ok(())
     }
