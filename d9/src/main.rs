@@ -43,11 +43,7 @@ fn task2(input: &[N]) -> N {
         .into_iter()
         .rev()
         .map(|(id, (i, n))| {
-            if let Some(free_i) = free
-                .iter()
-                .take_while(|&&(i_, _)| i_ < i)
-                .position(|&(_, n_)| n_ >= n)
-            {
+            if let Some(free_i) = free.iter().position(|&(i_, n_)| i_ < i && n_ >= n) {
                 let (i_, n_) = free[free_i];
                 free[free_i] = (i_ + n, n_ - n);
                 calc(i_, id as N, n)
