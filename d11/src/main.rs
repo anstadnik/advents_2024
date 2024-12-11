@@ -1,46 +1,39 @@
-use std::fs::read_to_string;
-
 use anyhow::Result;
+use cached::proc_macro::cached;
+use std::fs::read_to_string;
 
 type N = u64;
 fn parse_input(input: &str) -> Result<Vec<N>> {
     input.trim().split(" ").map(|l| Ok(l.parse()?)).collect()
 }
 
-type BIt = Box<dyn Iterator<Item = N>>;
-fn blink(input: BIt) -> BIt {
-    Box::new(input.flat_map(|n| {
-        if n == 0 {
-            [Some(1), None]
-        } else {
-            let n_digits = n.ilog10() + 1;
-            let magic_n = (10 as N).pow(n_digits / 2);
+#[cached]
+fn blink(n: N, i: usize) -> N {
+    if i == 0 {
+        1
+    } else if n == 0 {
+        blink(1, i - 1)
+    } else {
+        let n_digits = n.ilog10() + 1;
+        let magic_n = (10 as N).pow(n_digits / 2);
 
-            if n_digits % 2 == 0 {
-                [Some(n / magic_n), Some(n % magic_n)]
-            } else {
-                [Some(n * 2024), None]
-            }
+        if n_digits % 2 == 0 {
+            blink(n / magic_n, i - 1) + blink(n % magic_n, i - 1)
+        } else {
+            blink(n * 2024, i - 1)
         }
-        .into_iter()
-        .flatten()
-    }))
+    }
 }
 
-fn task1(input: &[N], n: usize) -> usize {
-    (0..n)
-        //.progress()
-        .fold(Box::new(input.to_vec().into_iter()) as BIt, |it, _| {
-            blink(it)
-        })
-        .count()
+fn task(input: &[N], i: usize) -> N {
+    input.iter().map(|&n| blink(n, i)).sum()
 }
 
 fn main() -> Result<()> {
     let input = parse_input(&read_to_string("input.txt")?)?;
 
-    println!("Answer 1: {}", task1(&input, 25));
-    println!("Answer 2: {}", task1(&input, 75));
+    println!("Answer 1: {}", task(&input, 25));
+    println!("Answer 2: {}", task(&input, 75));
 
     Ok(())
 }
@@ -49,7 +42,6 @@ fn main() -> Result<()> {
 mod tests {
     use super::*;
 
-    #[ignore]
     #[test]
     fn test_main() -> Result<()> {
         main()
@@ -60,7 +52,7 @@ mod tests {
         let input = r"125 17";
 
         let input = parse_input(input)?;
-        assert_eq!(task1(&input, 25), 55312);
+        assert_eq!(task(&input, 25), 55312);
         //assert_eq!(task2(&input), 81);
 
         Ok(())

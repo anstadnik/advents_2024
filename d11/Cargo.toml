@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.94"
+cached = "0.54.0"
 indicatif = "0.17.9"
