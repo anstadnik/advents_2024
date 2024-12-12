@@ -1,6 +1,6 @@
 use anyhow::Result;
 use itertools::Itertools;
-use nalgebra::{try_convert, Point2};
+use nalgebra::{try_convert, Vector2};
 use std::collections::{HashMap, HashSet};
 use std::fs::read_to_string;
 
@@ -9,18 +9,18 @@ fn parse_input(input: &str) -> Vec<Vec<char>> {
 }
 
 fn task<const TASK2: bool>(input: &[Vec<char>]) -> usize {
-    let mut locations = HashMap::<char, Vec<Point2<isize>>>::new();
+    let mut locations = HashMap::<char, Vec<Vector2<isize>>>::new();
     for (y, row) in input.iter().enumerate() {
         for (x, &c) in row.iter().enumerate() {
             if c != '.' {
-                let p = Point2::new(y as isize, x as isize);
+                let p = Vector2::new(y as isize, x as isize);
                 locations.entry(c).or_default().push(p);
             }
         }
     }
 
-    let pred = |p: Point2<isize>| {
-        let p_: Point2<usize> = try_convert(p)?;
+    let pred = |p: Vector2<isize>| {
+        let p_: Vector2<usize> = try_convert(p)?;
         input.get(p_.x)?.get(p_.y)?;
         Some(p)
     };
