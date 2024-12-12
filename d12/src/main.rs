@@ -1,11 +1,10 @@
+mod pos;
+
 use anyhow::Result;
 use itertools::Itertools;
-use nalgebra::{try_convert, vector, Scalar, Vector2};
+use nalgebra::vector;
+use pos::{IPos, IndexPoint, VVc};
 use std::fs::read_to_string;
-
-type Pos = Vector2<usize>;
-type IPos = Vector2<isize>;
-type VVc = Vec<Vec<char>>;
 
 #[derive(PartialEq, Eq, Hash)]
 enum Side {
@@ -16,31 +15,6 @@ enum Side {
 use Side::*;
 
 const OFFSETS: [IPos; 4] = [vector!(0, 1), vector!(0, -1), vector!(1, 0), vector!(-1, 0)];
-
-trait IndexPoint<T: Scalar> {
-    fn get_p(&self, p: Vector2<T>) -> Option<char>;
-    fn get_mut_p(&mut self, p: Vector2<T>) -> Option<&mut char>;
-}
-
-impl IndexPoint<usize> for VVc {
-    fn get_p(&self, p: Pos) -> Option<char> {
-        self.get(p.y)?.get(p.x).copied()
-    }
-
-    fn get_mut_p(&mut self, p: Pos) -> Option<&mut char> {
-        self.get_mut(p.y)?.get_mut(p.x)
-    }
-}
-
-impl IndexPoint<isize> for VVc {
-    fn get_p(&self, p: IPos) -> Option<char> {
-        self.get_p(try_convert::<_, Pos>(p)?)
-    }
-
-    fn get_mut_p(&mut self, p: IPos) -> Option<&mut char> {
-        self.get_mut_p(try_convert::<_, Pos>(p)?)
-    }
-}
 
 fn parse_input(input: &str) -> Vec<Vec<char>> {
     input.lines().map(|l| l.chars().collect()).collect()
@@ -57,7 +31,7 @@ fn flood_fill(field: &mut VVc, pos: IPos, positions: &mut Vec<IPos>) {
     }
 }
 
-fn gen_islands(mut field: Vec<Vec<char>>) -> Vec<Vec<IPos>> {
+fn islands(mut field: Vec<Vec<char>>) -> Vec<Vec<IPos>> {
     let (n, m) = (field.len() as isize, field[0].len() as isize);
     let mut islands = vec![];
     for pos in (0..n).cartesian_product(0..m).map(|(y, x)| vector!(x, y)) {
@@ -70,26 +44,23 @@ fn gen_islands(mut field: Vec<Vec<char>>) -> Vec<Vec<IPos>> {
     islands
 }
 
-fn gen_sides<'a>(field: &'a VVc, island: &'a [IPos]) -> impl Iterator<Item = Side> + use<'a> {
+fn sides<'a>(field: &'a VVc, island: &'a [IPos]) -> impl Iterator<Item = Side> + use<'a> {
     island.iter().flat_map(move |&p| {
         let c = field.get_p(p);
         OFFSETS
             .iter()
             .filter(move |&&d| field.get_p(p + d) != c)
-            .map(move |&d| match (d.y, d.x) {
-                (0, 1) => Vertical(p.x, p.x + 1, p.y),
-                (0, -1) => Vertical(p.x, p.x - 1, p.y),
-                (1, 0) => Horizontal(p.y, p.y + 1, p.x),
-                (-1, 0) => Horizontal(p.y, p.y - 1, p.x),
-                _ => unreachable!(),
+            .map(move |&d| match d.y == 0 {
+                true => Vertical(p.x, p.x + d.x, p.y),
+                false => Horizontal(p.y, p.y + d.y, p.x),
             })
     })
 }
 
-fn task1(field: &VVc) -> usize {
-    gen_islands(field.clone())
+fn task1(f: &VVc) -> usize {
+    islands(f.clone())
         .iter()
-        .map(|i| i.len() * gen_sides(field, i).count())
+        .map(|i| i.len() * sides(f, i).count())
         .sum()
 }
 
@@ -122,9 +93,9 @@ fn partition_sides(mut island: Vec<Side>) -> usize {
 }
 
 fn task2(field: &VVc) -> usize {
-    gen_islands(field.clone())
+    islands(field.clone())
         .iter()
-        .map(|i| i.len() * partition_sides(gen_sides(field, i).collect()))
+        .map(|i| i.len() * partition_sides(sides(field, i).collect()))
         .sum()
 }
 
