@@ -36,10 +36,10 @@ fn parse_input(input: &str) -> Result<Vec<Machine>> {
     input.trim().split("\n\n").map(|s| s.parse()).collect()
 }
 
-fn task_(m: Machine, max: N) -> Option<N> {
-    let a = (m.p.x * m.b.y - m.p.y * m.b.x) / (m.a.x * m.b.y - m.a.y * m.b.x);
-    let b = (-m.p.x * m.a.y + m.p.y * m.a.x) / (m.a.x * m.b.y - m.a.y * m.b.x);
-    (m.a * a + m.b * b == m.p && a >= 0 && b >= 0 && a <= max && b <= max).then(|| a * 3 + b)
+fn task_(Machine { a, b, p }: Machine, max: N) -> Option<N> {
+    let na = (p.x * b.y - p.y * b.x) / (a.x * b.y - a.y * b.x);
+    let nb = (-p.x * a.y + p.y * a.x) / (a.x * b.y - a.y * b.x);
+    (a * na + b * nb == p && na >= 0 && nb >= 0 && na <= max && nb <= max).then(|| na * 3 + nb)
 }
 
 fn task1(input: &[Machine]) -> N {
