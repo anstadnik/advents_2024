@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Result};
-use nalgebra::Vector2;
+use glam::I64Vec2;
 use std::{fs::read_to_string, str::FromStr};
 use winnow::{ascii::dec_int, seq, PResult, Parser};
 
-type N = i128;
-type V = Vector2<N>;
+type N = i64;
+type V = I64Vec2;
 
 #[derive(Debug, Clone, Copy)]
 struct Machine {
@@ -16,9 +16,9 @@ struct Machine {
 fn parse_machine(input: &mut &str) -> PResult<Machine> {
     seq! {
         Machine {
-            a : seq! { Vector2::new(_: "Button A: X",  dec_int,  _: ", Y",  dec_int,) },
-            b:  seq! { Vector2::new(_: "\nButton B: X",  dec_int, _: ", Y",  dec_int,) },
-            p:  seq! { Vector2::new(_: "\nPrize: X=",  dec_int, _: ", Y=",  dec_int,) },
+            a: seq! { V::new(_: "Button A: X", dec_int, _: ", Y", dec_int,) },
+            b: seq! { V::new(_: "\nButton B: X", dec_int, _: ", Y", dec_int,) },
+            p: seq! { V::new(_: "\nPrize: X=", dec_int, _: ", Y=", dec_int,) },
         }
     }
     .parse_next(input)
@@ -51,7 +51,7 @@ fn task2(input: &[Machine]) -> N {
         .iter()
         .filter_map(|m| {
             let m = Machine {
-                p: m.p.add_scalar(10000000000000),
+                p: m.p + V::splat(10_000_000_000_000),
                 ..*m
             };
             task_(m, N::MAX)
@@ -63,7 +63,7 @@ fn main() -> Result<()> {
     let input = parse_input(&read_to_string("input.txt")?)?;
 
     println!("Answer 1: {}", task1(&input));
-    println!("Answer 1: {}", task2(&input));
+    println!("Answer 2: {}", task2(&input));
 
     Ok(())
 }
@@ -97,7 +97,6 @@ Prize: X=18641, Y=10279";
 
         let input = parse_input(input)?;
         assert_eq!(task1(&input), 480);
-        //assert_eq!(task(&input, 100), 480);
 
         Ok(())
     }

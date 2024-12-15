@@ -1,40 +1,42 @@
 mod pos;
 
 use anyhow::Result;
+use glam::ivec2;
 use itertools::Itertools;
-use nalgebra::vector;
 use pos::{IPos, IndexPoint, VVc};
 use std::fs::read_to_string;
 
 #[derive(PartialEq, Eq, Hash)]
 enum Side {
-    Vertical(isize, isize, isize),
-    Horizontal(isize, isize, isize),
+    Vertical(i32, i32, i32),
+    Horizontal(i32, i32, i32),
 }
 
 use Side::*;
 
-const OFFSETS: [IPos; 4] = [vector!(0, 1), vector!(0, -1), vector!(1, 0), vector!(-1, 0)];
+const OFFSETS: [IPos; 4] = [ivec2(0, 1), ivec2(0, -1), ivec2(1, 0), ivec2(-1, 0)];
 
-fn parse_input(input: &str) -> Vec<Vec<char>> {
-    input.lines().map(|l| l.chars().collect()).collect()
+fn parse_input(input: &str) -> VVc {
+    input.lines().map(|line| line.chars().collect()).collect()
 }
 
 fn flood_fill(field: &mut VVc, pos: IPos, positions: &mut Vec<IPos>) {
     let c = field.get_p(pos).unwrap();
     *field.get_mut_p(pos).unwrap() = '.';
     positions.push(pos);
-    for d in OFFSETS {
+
+    for d in &OFFSETS {
         if field.get_p(pos + d) == Some(c) {
             flood_fill(field, pos + d, positions)
         }
     }
 }
 
-fn islands(mut field: Vec<Vec<char>>) -> Vec<Vec<IPos>> {
-    let (n, m) = (field.len() as isize, field[0].len() as isize);
+fn islands(mut field: VVc) -> Vec<Vec<IPos>> {
+    let (n, m) = (field.len() as i32, field[0].len() as i32);
     let mut islands = vec![];
-    for pos in (0..n).cartesian_product(0..m).map(|(y, x)| vector!(x, y)) {
+
+    for pos in (0..n).cartesian_product(0..m).map(|(y, x)| ivec2(x, y)) {
         if field.get_p(pos) != Some('.') {
             let mut positions = vec![];
             flood_fill(&mut field, pos, &mut positions);
@@ -44,12 +46,12 @@ fn islands(mut field: Vec<Vec<char>>) -> Vec<Vec<IPos>> {
     islands
 }
 
-fn sides<'a>(field: &'a VVc, island: &'a [IPos]) -> impl Iterator<Item = Side> + use<'a> {
+fn sides<'a>(field: &'a VVc, island: &'a [IPos]) -> impl Iterator<Item = Side> + 'a {
     island.iter().flat_map(move |&p| {
         let c = field.get_p(p);
         OFFSETS
             .iter()
-            .filter(move |&&d| field.get_p(p + d) != c)
+            .filter(move |&d| field.get_p(p + d) != c)
             .map(move |&d| match d.y == 0 {
                 true => Vertical(p.x, p.x + d.x, p.y),
                 false => Horizontal(p.y, p.y + d.y, p.x),
@@ -57,31 +59,31 @@ fn sides<'a>(field: &'a VVc, island: &'a [IPos]) -> impl Iterator<Item = Side> +
     })
 }
 
-fn task1(f: &VVc) -> usize {
-    islands(f.clone())
+fn task1(field: &VVc) -> usize {
+    islands(field.clone())
         .iter()
-        .map(|i| i.len() * sides(f, i).count())
+        .map(|island| island.len() * sides(field, island).count())
         .sum()
 }
 
 fn partition_sides(mut island: Vec<Side>) -> usize {
     let mut count = 0;
 
-    while let Some(s) = island.pop() {
+    while let Some(side) = island.pop() {
         count += 1;
 
-        match s {
+        match side {
             Vertical(x1, x2, y) => {
-                let mut f = |y_| {
-                    let pred = |s| s == &Vertical(x1, x2, y_);
+                let mut f = |y_offset| {
+                    let pred = |s| s == &Vertical(x1, x2, y_offset);
                     island.iter().position(pred).map(|p| island.swap_remove(p))
                 };
                 (y + 1..).map_while(&mut f).for_each(drop);
                 (0..y).rev().map_while(&mut f).for_each(drop);
             }
             Horizontal(y1, y2, x) => {
-                let mut f = |x_| {
-                    let pred = |s| s == &Horizontal(y1, y2, x_);
+                let mut f = |x_offset| {
+                    let pred = |s| s == &Horizontal(y1, y2, x_offset);
                     island.iter().position(pred).map(|p| island.swap_remove(p))
                 };
                 (x + 1..).map_while(&mut f).for_each(drop);
@@ -95,7 +97,7 @@ fn partition_sides(mut island: Vec<Side>) -> usize {
 fn task2(field: &VVc) -> usize {
     islands(field.clone())
         .iter()
-        .map(|i| i.len() * partition_sides(sides(field, i).collect()))
+        .map(|island| island.len() * partition_sides(sides(field, island).collect()))
         .sum()
 }
 
