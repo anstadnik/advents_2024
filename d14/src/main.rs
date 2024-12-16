@@ -1,15 +1,23 @@
 use anyhow::{anyhow, Result};
-use ndarray::{arr1, Array1, Array2};
+use crossterm::event::{poll, read, Event, KeyCode, KeyEvent};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
+use glam::IVec2;
 use std::cmp::Ordering::{Equal, Greater, Less};
+use std::io::{self, Write};
+use std::iter::once;
+use std::time::Duration;
 use std::{fs::read_to_string, str::FromStr};
 use winnow::{ascii::dec_int, seq, PResult, Parser};
 
 type N = i32;
+type V = IVec2;
+type Field = Vec<Vec<N>>;
+const USE_CROSSTERM: bool = false;
 
 #[derive(Debug, Clone)]
 struct Robot {
-    p: Array1<N>,
-    v: Array1<N>,
+    p: V,
+    v: V,
 }
 
 fn parse_robot(s: &mut &str) -> PResult<(N, N, N, N)> {
@@ -24,7 +32,7 @@ impl FromStr for Robot {
 
     fn from_str(s: &str) -> Result<Self> {
         let (p1, p2, v1, v2) = parse_robot.parse(s).map_err(|e| anyhow!("{e}"))?;
-        let (p, v) = (arr1(&[p1, p2]), arr1(&[v1, v2]));
+        let (p, v) = (V::new(p1, p2), V::new(v1, v2));
         Ok(Self { p, v })
     }
 }
@@ -33,47 +41,34 @@ fn parse_input(input: &str) -> Result<Vec<Robot>> {
     input.lines().map(Robot::from_str).collect()
 }
 
-fn print_field(m: &Array2<N>) {
-    for row in m.rows() {
-        for v in row {
-            if *v == 0 {
-                print!(".");
-            } else {
-                print!("{v}");
-            }
-        }
-        println!();
-    }
+fn print_field(m: &[Vec<N>]) -> impl Iterator<Item = char> + use<'_> {
+    m.iter().flat_map(|row| {
+        row.iter()
+            .map(|&v| match v {
+                0 => '.',
+                _ => char::from_digit(v as _, 10).unwrap(),
+            })
+            .chain(once('\n'))
+    })
 }
 
-fn task1(robots: &[Robot], size: [N; 2]) -> Result<usize> {
-    let mut field: Array2<N> = Array2::zeros((size[1] as usize, size[0] as usize));
-    let size = arr1(&size);
-    let (a, b, c, d) = robots
+fn gen_positions(robots: &[Robot], size: V, n: N) -> Vec<V> {
+    robots
         .iter()
-        //.inspect(|Robot { p, v }| {
-        //    println!(
-        //        "p: {}, v: {}, p+v*100: {}, (p+v*100)%s: {}",
-        //        p,
-        //        v,
-        //        p + v * 100,
-        //        (p + v * 100) % &size
-        //    )
-        //})
-        .map(|Robot { p, v }| (p + v * 100) % &size)
-        //.inspect(|p| println!("{}, {}", p[0], p[1]))
-        .map(|p| {
-            (p < size);
-            let (x, y) = (p[0], p[1]);
-            (size[0] * (x < 0) as N + x, size[1] * (y < 0) as N + y)
-        })
-        //.inspect(|(y, x)| println!("{y}, {x}"))
-        .inspect(|&(x, y)| {
-            //print_field(&field);
-            field[[y as usize, x as usize]] += 1
-        })
-        .fold((0, 0, 0, 0), |(a, b, c, d), (x, y)| {
-            match (y.cmp(&(&size[1] / 2)), x.cmp(&(&size[0] / 2))) {
+        .map(|Robot { p, v }| (*p + *v * n).rem_euclid(size))
+        .collect()
+}
+
+fn task1(robots: &[Robot], size: [N; 2], i: N) -> Result<(Field, usize)> {
+    let mut field = vec![vec![0; size[0] as usize]; size[1] as usize];
+    let size = V::new(size[0], size[1]);
+    let positions = gen_positions(robots, size, i);
+
+    let (a, b, c, d) = positions
+        .iter()
+        .inspect(|p| field[p.y as usize][p.x as usize] += 1)
+        .fold((0, 0, 0, 0), |(a, b, c, d), p| {
+            match (p.y.cmp(&(size.y / 2)), p.x.cmp(&(size.x / 2))) {
                 (Equal, _) | (_, Equal) => (a, b, c, d),
                 (Less, Less) => (a + 1, b, c, d),
                 (Less, Greater) => (a, b + 1, c, d),
@@ -81,16 +76,65 @@ fn task1(robots: &[Robot], size: [N; 2]) -> Result<usize> {
                 (Greater, Greater) => (a, b, c, d + 1),
             }
         });
-    println!("{a}, {b}, {c}, {d}");
-    print_field(&field);
-    Ok(a * b * c * d)
+
+    Ok((field, a * b * c * d))
+}
+
+fn task2(robots: &[Robot], size: [N; 2]) -> Result<N> {
+    if USE_CROSSTERM {
+        let _ = enable_raw_mode();
+    }
+    let (mut i, mut run) = (0, true);
+
+    loop {
+        let (field, _) = task1(robots, size, i)?;
+        let s = print_field(&field);
+
+        if USE_CROSSTERM {
+            write!(
+                io::stdout(),
+                "{}",
+                s.collect::<String>().replace("\n", "\r\n")
+            )?;
+            write!(io::stdout(), "{i}")?;
+            io::stdout().flush()?;
+            if poll(Duration::from_millis(200))? {
+                if let Event::Key(KeyEvent { code, .. }) = read()? {
+                    match code {
+                        KeyCode::Right => i += 1,
+                        KeyCode::Left => i -= 1,
+                        KeyCode::Enter => {
+                            let _ = disable_raw_mode();
+                            return Ok(i);
+                        }
+                        KeyCode::Char(' ') => run = !run,
+                        _ => (),
+                    }
+                }
+            } else if run {
+                i += 1;
+            }
+        } else {
+            let s: String = s.collect();
+            let max = s
+                .lines()
+                .map(|l| l.chars().filter(|c| *c != '.').count())
+                .max()
+                .unwrap();
+            if max > 31 {
+                println!("{s}");
+                return Ok(i);
+            }
+            i += 1;
+        }
+    }
 }
 
 fn main() -> Result<()> {
     let robots = parse_input(&read_to_string("input.txt")?)?;
 
-    println!("Answer 1: {}", task1(&robots, [101, 103])?);
-    //println!("Answer 2: {}", task2(&input));
+    println!("Answer 1: {}", task1(&robots, [101, 103], 100)?.1);
+    println!("Answer 2: {}", task2(&robots, [101, 103])?);
 
     Ok(())
 }
@@ -99,7 +143,6 @@ fn main() -> Result<()> {
 mod tests {
     use super::*;
 
-    #[ignore]
     #[test]
     fn test_main() -> Result<()> {
         main()
@@ -121,7 +164,7 @@ p=2,4 v=2,-3
 p=9,5 v=-3,-3";
 
         let input = parse_input(input)?;
-        assert_eq!(task1(&input, [11, 7])?, 12);
+        assert_eq!(task1(&input, [11, 7], 100)?.1, 12);
 
         //assert_eq!(task2(&input), 81);
 
