@@ -6,17 +6,11 @@ pub struct State {
     pub b: N,
     pub c: N,
     pub pc: usize,
-    pub output: Vec<N>,
 }
 
 impl State {
+    #[allow(dead_code)]
     pub fn new(a: N, b: N, c: N, pc: usize) -> Self {
-        Self {
-            a,
-            b,
-            c,
-            pc,
-            output: Vec::new(),
-        }
+        Self { a, b, c, pc }
     }
 }

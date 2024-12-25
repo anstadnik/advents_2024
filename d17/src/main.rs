@@ -3,45 +3,49 @@ mod program;
 mod state;
 
 use anyhow::Result;
-use indicatif::ParallelProgressIterator;
 use instruction::Instruction;
 use program::Program;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use state::N;
 use std::fs::read_to_string;
 
 fn task1(program: &mut Program) -> String {
-    program.execute();
     program
-        .state
-        .output
-        .iter()
+        .execute()
         .map(|i| i.to_string())
         .collect::<Vec<_>>()
         .join(",")
 }
 
+#[allow(dead_code)]
 fn task2_bruteforce(program: &Program) -> Option<N> {
-    let _hmmm = 265_601_188_299_675_usize;
-    let max = 1_000_000_000_000_000_usize;
-    assert!(max < N::MAX as usize);
-    (1..max)
-        .into_par_iter()
-        .progress()
-        .find_first(|a| {
-            let mut program = program.clone();
-            program.state.a = *a as _;
-            program.execute();
-            program.state.output == program.code
-        })
-        .map(|a| a as N)
+    program.find_a()
+}
+
+fn step(a: N) -> N {
+    let mut b = (a % 8) ^ 7;
+    b ^= a >> b;
+    b ^= 4;
+    b % 8
+}
+
+fn task2_hardcoded(code: &[N]) -> Box<dyn Iterator<Item = N> + '_> {
+    match code {
+        [head] => Box::new((0..=8).filter(|&a| step(a) == *head)),
+        [head, tail @ ..] => Box::new(
+            task2_hardcoded(tail).flat_map(|a| (a * 8..=a * 8 + 8).filter(|&a_| step(a_) == *head)),
+        ),
+        _ => unreachable!(),
+    }
 }
 
 fn main() -> Result<()> {
     let mut program: Program = read_to_string("input.txt")?.parse()?;
 
     println!("Answer 1: {}", task1(&mut program));
-    println!("Answer 2: {}", task2_bruteforce(&program).unwrap());
+    println!(
+        "Answer 2: {:?}",
+        task2_hardcoded(&program.code).min().unwrap()
+    );
 
     Ok(())
 }
@@ -51,7 +55,6 @@ mod tests {
     use super::*;
     use state::State;
 
-    #[ignore]
     #[test]
     fn test_main() -> Result<()> {
         main()
@@ -63,7 +66,7 @@ mod tests {
             state: State::new(0, 0, 9, 0),
             code: vec![2, 6],
         };
-        program.execute();
+        program.execute().for_each(drop);
         assert_eq!(program.state.b, 1);
     }
 
@@ -94,7 +97,7 @@ mod tests {
             state: State::new(0, 29, 0, 0),
             code: vec![1, 7],
         };
-        program.execute();
+        program.execute().for_each(drop);
         assert_eq!(program.state.b, 26);
     }
 
@@ -104,7 +107,7 @@ mod tests {
             state: State::new(0, 2024, 43690, 0),
             code: vec![4, 0],
         };
-        program.execute();
+        program.execute().for_each(drop);
         assert_eq!(program.state.b, 44354);
     }
 
@@ -121,7 +124,7 @@ Program: 0,1,5,4,3,0";
     }
 
     #[test]
-    fn test_task2() {
+    pub fn test_task2() {
         let input = r"Register A: 2024
 Register B: 0
 Register C: 0

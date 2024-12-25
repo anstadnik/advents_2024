@@ -41,24 +41,25 @@ impl From<N> for Instruction {
 }
 
 impl Instruction {
-    pub fn execute(&self, operand: N, state: &mut State) {
+    pub fn execute(&self, operand: N, state: &mut State) -> Option<N> {
+        let mut value = None;
+
         match self {
             Instruction::Adv => state.a /= (2 as N).pow(combo(operand, state) as _),
             Instruction::Bxl => state.b ^= operand,
             Instruction::Bst => state.b = combo(operand, state) % 8,
             Instruction::Jnz if state.a != 0 => {
                 state.pc = operand as usize;
-                return;
+                return value;
             }
             Instruction::Jnz => {}
             Instruction::Bxc => state.b ^= state.c,
-            Instruction::Out => {
-                let value = combo(operand, state) % 8;
-                state.output.push(value)
-            }
+            Instruction::Out => value = Some(combo(operand, state) % 8),
             Instruction::Bdv => state.b = state.a / (2 as N).pow(combo(operand, state) as _),
             Instruction::Cdv => state.c = state.a / (2 as N).pow(combo(operand, state) as _),
         }
         state.pc += 2;
+
+        value
     }
 }
