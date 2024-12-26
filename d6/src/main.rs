@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use indicatif::ParallelProgressIterator;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rustc_hash::FxHashSet;
 use std::{collections::HashSet, fs::read_to_string};
 use Direction::*;
 
@@ -67,7 +68,7 @@ fn parse_input(input: &str) -> Result<(Vec<Vec<char>>, Guard)> {
 }
 
 fn task1(grid: &[Vec<char>], mut guard: Guard) -> Option<HashSet<(usize, usize)>> {
-    let mut history = HashSet::new();
+    let mut history = FxHashSet::default();
     loop {
         if !history.insert(guard) {
             return None;
