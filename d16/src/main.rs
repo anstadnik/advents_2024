@@ -3,6 +3,7 @@ use anyhow::Result;
 use enums::{Dir::*, Pos};
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fs::read_to_string;
+use std::rc::Rc;
 
 fn parse_input(input: &str) -> (Vec<Vec<char>>, Pos, Pos) {
     let mut map: Vec<Vec<char>> = input.lines().map(|line| line.chars().collect()).collect();
@@ -20,10 +21,32 @@ fn parse_input(input: &str) -> (Vec<Vec<char>>, Pos, Pos) {
     (map, start, end)
 }
 
-type V = Vec<Pos>;
+/// A node in our singly-linked path list
+#[derive(Debug, PartialEq, Eq)]
+struct Node {
+    parent: Option<Rc<Node>>,
+    pos: Pos,
+}
 
+/// Collects all positions from this node up to the start by following `.parent` links
+fn collect_path(mut node: &Node) -> Vec<Pos> {
+    let mut rev = Vec::new();
+    // Walk up until parent is None
+    loop {
+        rev.push(node.pos);
+        if let Some(ref parent) = node.parent {
+            node = parent.as_ref();
+        } else {
+            break;
+        }
+    }
+    rev.reverse();
+    rev
+}
+
+/// Instead of storing `Vec<Pos>`, we store the head node (an Rc<Node>) and a cost
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct PathCost(V, u32);
+struct PathCost(Rc<Node>, u32);
 
 impl PartialOrd for PathCost {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -33,27 +56,37 @@ impl PartialOrd for PathCost {
 
 impl Ord for PathCost {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Reversed
+        // We want a min-heap by cost, so we reverse
         other.1.cmp(&self.1)
     }
 }
 
 fn get_paths(map: &[Vec<char>], start: Pos, end: Pos) -> Vec<(Vec<Pos>, u32)> {
+    let start_node = Rc::new(Node {
+        parent: None,
+        pos: start,
+    });
+
     let mut mem = HashMap::new();
-    let mut queue: BinaryHeap<PathCost> = [PathCost([start].into(), 0)].into();
+    // Instead of pushing `PathCost(vec![start], 0)`, push a single-node path
+    let mut queue: BinaryHeap<PathCost> = [PathCost(start_node.clone(), 0)].into();
     let mut rez = Vec::new();
     let mut min_cost = None;
 
-    while let Some(PathCost(path, cost)) = queue.pop() {
+    while let Some(PathCost(node, cost)) = queue.pop() {
+        // If we've found a minimum cost, prune anything bigger
         if min_cost.is_some_and(|min| cost > min) {
             break;
         }
-        let p = *path.last().unwrap();
-        if let Some(&cost_) = mem.get(&p) {
-            if cost > cost_ {
+
+        let p = node.pos;
+        // Standard BFS / D'ijkstra skipping if cost is worse
+        if let Some(&old_cost) = mem.get(&p) {
+            if cost > old_cost {
                 continue;
             }
         }
+        // Check boundaries, walls, etc.
         if map
             .get(p.y)
             .is_none_or(|row| row.get(p.x).is_none_or(|&c| c == '#'))
@@ -61,27 +94,45 @@ fn get_paths(map: &[Vec<char>], start: Pos, end: Pos) -> Vec<(Vec<Pos>, u32)> {
             continue;
         }
         mem.insert(p, cost);
+
+        // If this is end, add to results
         if p.y == end.y && p.x == end.x {
-            rez.push((path.clone(), cost));
+            // Convert the singly-linked list into Vec<Pos>
+            let path_vec = collect_path(&node);
+            rez.push((path_vec, cost));
+            // Track the minimum cost
             if min_cost.is_none() {
                 min_cost = Some(cost);
             }
         }
-        let turn = p.turn().into_iter().map(|p| (p, cost + 1000));
-        let step = [p.step()].into_iter().filter_map(|p| Some((p?, cost + 1)));
-        queue.extend(
-            step.chain(turn)
-                .map(|(pos, cost)| PathCost(path.iter().copied().chain([pos]).collect(), cost)),
-        );
+
+        // Otherwise, explore next steps
+        //   - turning yields cost+1000
+        //   - stepping forward yields cost+1
+        let turn = p.turn().into_iter().map(|new_pos| (new_pos, cost + 1000));
+        let step = [p.step()]
+            .into_iter()
+            .filter_map(|o| o.map(|np| (np, cost + 1)));
+
+        for (pos, new_cost) in turn.chain(step) {
+            // Extend the singly-linked list with an O(1) new node
+            let new_node = Rc::new(Node {
+                parent: Some(node.clone()),
+                pos,
+            });
+            queue.push(PathCost(new_node, new_cost));
+        }
     }
 
     rez
 }
 
+/// The cheapest cost among the paths
 fn task1(paths: &[(Vec<Pos>, u32)]) -> Option<u32> {
     paths.iter().map(|(_, c)| *c).min()
 }
 
+/// The count of unique coordinates in *all* minimal-cost paths
 fn task2(paths: &[(Vec<Pos>, u32)]) -> Option<usize> {
     let min_cost = *paths.iter().map(|(_, cost)| cost).min()?;
     Some(
