@@ -1,4 +1,5 @@
 use anyhow::Result;
+use itertools::Itertools;
 use std::fs::read_to_string;
 
 #[derive(Debug, Clone, Copy)]
@@ -54,6 +55,46 @@ fn dfs(map: &mut Vec<Vec<i32>>, Pos { x, y }: Pos, d: i32) {
             dfs(map, new_pos, d + 1);
         }
     }
+}
+
+fn task1(map: Vec<Vec<i32>>, start: Pos, end: Pos) -> Vec<(Pos, Pos, i32)> {
+    let mut results = Vec::new();
+    let mut default_map = map.clone();
+    dfs(&mut default_map, start, 0);
+    let default_distance = default_map[end.y][end.x];
+
+    for (y, x) in (0..map.len()).cartesian_product(0..map[0].len()) {
+        if map[y][x] == -1 {
+            let mut new_map = map.clone();
+            new_map[y][x] = 0;
+
+            let mut has_adjacent_walls = false;
+            for (dy, dx) in [(1, 0), (0, 1)] {
+                let new_y = y as isize + dy;
+                let new_x = x as isize + dx;
+                if new_y >= 0 && new_x >= 0 {
+                    let new_y = new_y as usize;
+                    let new_x = new_x as usize;
+                    if new_y < map.len() && new_x < map[0].len() && map[new_y][new_x] == -1 {
+                        new_map[new_y][new_x] = 0;
+                        has_adjacent_walls = true;
+                    }
+                }
+            }
+
+            let mut new_map_clone = new_map.clone();
+            dfs(&mut new_map_clone, start, 0);
+            let new_distance = new_map_clone[end.y][end.x];
+
+            if has_adjacent_walls {
+                results.push((Pos { x, y }, end, default_distance - new_distance));
+            } else {
+                results.push((Pos { x, y }, Pos { x, y }, default_distance - new_distance));
+            }
+        }
+    }
+
+    results
 }
 
 fn main() -> Result<()> {

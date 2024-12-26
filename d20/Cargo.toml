@@ -5,5 +5,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.95"
+itertools = "0.13.0"
 rayon = "1.10.0"
 winnow = "0.6.20"
