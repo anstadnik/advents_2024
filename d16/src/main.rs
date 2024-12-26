@@ -2,7 +2,7 @@ mod enums;
 use anyhow::Result;
 use enums::{Dir::*, Pos};
 use std::collections::{BinaryHeap, HashMap, HashSet};
-use std::{fs::read_to_string, iter::once};
+use std::fs::read_to_string;
 
 fn parse_input(input: &str) -> (Vec<Vec<char>>, Pos, Pos) {
     let mut map: Vec<Vec<char>> = input.lines().map(|line| line.chars().collect()).collect();
@@ -20,8 +20,11 @@ fn parse_input(input: &str) -> (Vec<Vec<char>>, Pos, Pos) {
     (map, start, end)
 }
 
+type V = Vec<Pos>;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct PathCost(Vec<Pos>, u32);
+struct PathCost(V, u32);
+
 impl PartialOrd for PathCost {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
@@ -37,7 +40,7 @@ impl Ord for PathCost {
 
 fn get_paths(map: &[Vec<char>], start: Pos, end: Pos) -> Vec<(Vec<Pos>, u32)> {
     let mut mem = HashMap::new();
-    let mut queue: BinaryHeap<PathCost> = [PathCost(vec![start], 0)].into();
+    let mut queue: BinaryHeap<PathCost> = [PathCost([start].into(), 0)].into();
     let mut rez = Vec::new();
     let mut min_cost = None;
 
@@ -65,11 +68,11 @@ fn get_paths(map: &[Vec<char>], start: Pos, end: Pos) -> Vec<(Vec<Pos>, u32)> {
             }
         }
         let turn = p.turn().into_iter().map(|p| (p, cost + 1000));
-        let step = once(p.step()).filter_map(|p| Some((p?, cost + 1)));
-        queue
-            .extend(turn.chain(step).map(|(pos, cost)| {
-                PathCost(path.iter().copied().chain(once(pos)).collect(), cost)
-            }));
+        let step = [p.step()].into_iter().filter_map(|p| Some((p?, cost + 1)));
+        queue.extend(
+            step.chain(turn)
+                .map(|(pos, cost)| PathCost(path.iter().copied().chain([pos]).collect(), cost)),
+        );
     }
 
     rez
