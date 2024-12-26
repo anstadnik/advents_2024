@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::fs::read_to_string;
 
+#[derive(Debug, Clone, Copy)]
 struct Pos {
     x: usize,
     y: usize,
@@ -35,25 +36,28 @@ fn parse_input(input: &str) -> anyhow::Result<(Vec<Vec<i32>>, Pos, Pos)> {
     )
 }
 
-fn dfs(map: &mut Vec<Vec<char>>, Pos(x, y): Pos, d: i32) {
+fn dfs(map: &mut Vec<Vec<i32>>, Pos { x, y }: Pos, d: i32) {
     if map[y][x] <= d {
         return;
     }
     map[y][x] = d;
 
     for (dy, dx) in [(1, 0), (0, 1), (-1, 0), (0, -1)] {
-        let get_new_coord = |(x, y): Pos, (dx, dy)| {
+        let get_new_coord = |Pos { x, y }: Pos, (dx, dy): (isize, isize)| {
             let (x, y) = (x.checked_add_signed(dx)?, y.checked_add_signed(dy)?);
-            map.get(y)?.get(x).filter(|&&v| v != -1).map(|&_| (x, y))
+            map.get(y)?
+                .get(x)
+                .filter(|&&v| v != -1)
+                .map(|&_| Pos { x, y })
         };
-        if let Some((x, y)) = get_new_coord((x, y), (dx, dy)) {
-            dfs(map, (x, y), d + 1)
+        if let Some(new_pos) = get_new_coord(Pos { x, y }, (dx, dy)) {
+            dfs(map, new_pos, d + 1);
         }
     }
 }
 
 fn main() -> Result<()> {
-    let (map, start, end) = parse_input(&read_to_string("input.txt")?);
+    let (map, start, end) = parse_input(&read_to_string("input.txt")?)?;
 
     println!("{:?}", map);
     Ok(())
