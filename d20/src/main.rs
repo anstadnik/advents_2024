@@ -1,5 +1,6 @@
 use anyhow::Result;
-use itertools::Itertools;
+use indicatif::ParallelProgressIterator;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::fs::read_to_string;
 
 #[derive(Debug, Clone, Copy)]
@@ -58,48 +59,54 @@ fn dfs(map: &mut Vec<Vec<i32>>, Pos { x, y }: Pos, d: i32) {
 }
 
 fn task1(map: Vec<Vec<i32>>, start: Pos, end: Pos) -> Vec<(Pos, Pos, i32)> {
-    let mut results = Vec::new();
+    //let mut results = Vec::new();
     let mut default_map = map.clone();
     dfs(&mut default_map, start, 0);
     let default_distance = default_map[end.y][end.x];
 
-    for (y, x) in (0..map.len()).cartesian_product(0..map[0].len()) {
-        if map[y][x] == -1 {
+    //(0..map.len())
+    //    .cartesian_product(0..map[0].len())
+    //.par_bridge()
+    (0..map.len())
+        .into_par_iter()
+        .flat_map(|y| (0..map[0].len()).into_par_iter().map(move |x| (y, x)))
+        //.progress()
+        .filter(|&(y, x)| map[y][x] == -1)
+        .map(|(y, x)| {
+            let below = map
+                .get(y + 1)
+                .and_then(|row| row.get(x))
+                .is_some_and(|&v| v == -1);
+            let right = map
+                .get(y)
+                .and_then(|row| row.get(x + 1))
+                .is_some_and(|&v| v == -1);
+            match (below, right) {
+                (true, true) => [
+                    Some((Pos { x, y }, Pos { x, y: y + 1 })),
+                    Some((Pos { x, y }, Pos { x: x + 1, y })),
+                ],
+                (true, false) => [Some((Pos { x, y }, Pos { x, y: y + 1 })), None],
+                (false, true) => [Some((Pos { x, y }, Pos { x: x + 1, y })), None],
+                (false, false) => [Some((Pos { x, y }, Pos { x, y })), None],
+            }
+        })
+        .flatten()
+        .flatten()
+        .map(|(s, e)| {
             let mut new_map = map.clone();
-            new_map[y][x] = 0;
+            new_map[s.y][s.x] = 0;
+            new_map[e.y][e.x] = 0;
 
-            let mut has_adjacent_walls = false;
-            for (dy, dx) in [(1, 0), (0, 1)] {
-                let new_y = y as isize + dy;
-                let new_x = x as isize + dx;
-                if new_y >= 0 && new_x >= 0 {
-                    let new_y = new_y as usize;
-                    let new_x = new_x as usize;
-                    if new_y < map.len() && new_x < map[0].len() && map[new_y][new_x] == -1 {
-                        new_map[new_y][new_x] = 0;
-                        has_adjacent_walls = true;
-                    }
-                }
-            }
-
-            let mut new_map_clone = new_map.clone();
-            dfs(&mut new_map_clone, start, 0);
-            let new_distance = new_map_clone[end.y][end.x];
-
-            if has_adjacent_walls {
-                results.push((Pos { x, y }, end, default_distance - new_distance));
-            } else {
-                results.push((Pos { x, y }, Pos { x, y }, default_distance - new_distance));
-            }
-        }
-    }
-
-    results
+            dfs(&mut new_map, start, 0);
+            (s, e, default_distance - new_map[end.y][end.x])
+        })
+        .collect()
 }
 
 fn main() -> Result<()> {
     let (map, start, end) = parse_input(&read_to_string("input.txt")?)?;
 
-    println!("{:?}", map);
+    println!("Answer 1: {:?}", task1(map.clone(), start, end));
     Ok(())
 }
