@@ -3,6 +3,7 @@ use anyhow::Result;
 use enums::{Dir::*, Pos};
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fs::read_to_string;
+use std::iter::successors;
 use std::rc::Rc;
 
 fn parse_input(input: &str) -> (Vec<Vec<char>>, Pos, Pos) {
@@ -29,19 +30,13 @@ struct Node {
 }
 
 /// Collects all positions from this node up to the start by following `.parent` links
-fn collect_path(mut node: &Node) -> Vec<Pos> {
-    let mut rev = Vec::new();
-    // Walk up until parent is None
-    loop {
-        rev.push(node.pos);
-        if let Some(ref parent) = node.parent {
-            node = parent.as_ref();
-        } else {
-            break;
-        }
-    }
-    rev.reverse();
-    rev
+fn collect_path(node: &Node) -> Vec<Pos> {
+    // Walk backward using successors, then reverse at the end
+    let mut path: Vec<Pos> = successors(Some(node), |&n| n.parent.as_deref())
+        .map(|n| n.pos)
+        .collect();
+    path.reverse();
+    path
 }
 
 /// Instead of storing `Vec<Pos>`, we store the head node (an Rc<Node>) and a cost
