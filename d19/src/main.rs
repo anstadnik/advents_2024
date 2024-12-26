@@ -1,13 +1,9 @@
 use anyhow::{anyhow, Result};
 use cached::{proc_macro::cached, UnboundCache};
-use indicatif::ParallelProgressIterator;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::fs::read_to_string;
-use winnow::{
-    ascii::alpha1,
-    combinator::{separated, separated_pair},
-    PResult, Parser,
-};
+use winnow::combinator::{separated, separated_pair};
+use winnow::{ascii::alpha1, PResult, Parser};
 
 fn parse_input<'a>(input: &mut &'a str) -> PResult<(Vec<&'a str>, Vec<&'a str>)> {
     separated_pair(
@@ -34,11 +30,7 @@ fn can_build(design: &str, towels: &[&str]) -> usize {
 }
 
 fn get_number_of_possible_builds(towels: &[&str], designs: &[&str]) -> Vec<usize> {
-    designs
-        .par_iter()
-        .progress()
-        .map(|d| can_build(d, towels))
-        .collect()
+    designs.par_iter().map(|d| can_build(d, towels)).collect()
 }
 
 fn task1(number_of_possible_builds: &[usize]) -> usize {
