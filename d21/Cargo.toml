@@ -1,0 +1,10 @@
+[package]
+name = "d21"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.95"
+indicatif = { version = "0.17.9", features = ["rayon"] }
+itertools = "0.13.0"
+rayon = "1.10.0"
