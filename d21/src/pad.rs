@@ -1,5 +1,3 @@
-use cached::proc_macro::cached;
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Pos {
     pub x: isize,
@@ -51,27 +49,6 @@ pub const KEY_PAD2: KeyPad = KeyPad {
     pos: Pos { x: 2, y: 0 },
 };
 
-#[cached]
-fn gen_moves_cached(mut self_: KeyPad, c: char) -> (KeyPad, String) {
-    let Pos { x, y } = self_.get_char(c);
-    let (dx, dy) = (x - self_.pos.x, y - self_.pos.y);
-    let old_pos = self_.pos;
-    self_.pos = Pos { x, y };
-
-    let col_move = ["<", ">"][(dx > 0) as usize].repeat(dx.unsigned_abs());
-    let row_move = ["^", "v"][(dy > 0) as usize].repeat(dy.unsigned_abs());
-
-    (
-        self_,
-        (if self_.is_forbidden(old_pos, &col_move) {
-            row_move + &col_move
-        } else if self_.is_forbidden(old_pos, &row_move) || col_move.starts_with('<') {
-            col_move + &row_move
-        } else {
-            row_move + &col_move
-        }) + "A",
-    )
-}
 impl KeyPad {
     // Add cached
     fn get_char(&self, c: char) -> Pos {
@@ -83,12 +60,24 @@ impl KeyPad {
     }
 
     pub fn gen_moves(&mut self, c: char) -> String {
-        let (self_, moves) = gen_moves_cached(*self, c);
-        *self = self_;
-        moves
+        let Pos { x, y } = self.get_char(c);
+        let (dx, dy) = (x - self.pos.x, y - self.pos.y);
+        let old_pos = self.pos;
+        self.pos = Pos { x, y };
+
+        let col_move = ["<", ">"][(dx > 0) as usize].repeat(dx.unsigned_abs());
+        let row_move = ["^", "v"][(dy > 0) as usize].repeat(dy.unsigned_abs());
+
+        (if self.is_forbidden(old_pos, &col_move) {
+            row_move + &col_move
+        } else if self.is_forbidden(old_pos, &row_move) || col_move.starts_with('<') {
+            col_move + &row_move
+        } else {
+            row_move + &col_move
+        }) + "A"
     }
 
-    pub fn gen_moves_str(mut self, s: Box<dyn Iterator<Item = char> + '_>) -> Box<dyn Iterator<Item = char> + '_> {
-        Box::new(s.flat_map(move |c| self.gen_moves(c).chars().collect::<Vec<_>>()))
+    pub fn gen_moves_str(mut self, s: String) -> Vec<String> {
+        s.chars().map(move |c| self.gen_moves(c)).collect()
     }
 }

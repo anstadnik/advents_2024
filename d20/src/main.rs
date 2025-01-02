@@ -37,7 +37,7 @@ fn parse_input(input: &str) -> anyhow::Result<(Vec<Vec<i32>>, Pos, Pos)> {
     )
 }
 
-fn print_map(map: &[Vec<i32>]) {
+fn _print_map(map: &[Vec<i32>]) {
     for row in map {
         for &v in row {
             print!(
