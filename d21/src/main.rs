@@ -22,22 +22,12 @@ fn gen_task_moves(s: String, is_keypad_1: bool, n_keypads: usize) -> u64 {
         .sum()
 }
 
-fn task1(input: &[String]) -> u64 {
+fn task(input: &[String], n: usize) -> u64 {
     input
         .iter()
         .map(|line| {
-            gen_task_moves(line.to_string(), true, 3)
-                * line.strip_suffix(['A']).unwrap().parse::<u64>().unwrap()
-        })
-        .sum()
-}
-
-fn task2(input: &[String]) -> u64 {
-    input
-        .iter()
-        .map(|line| {
-            gen_task_moves(line.to_string(), true, 26)
-                * line.strip_suffix(['A']).unwrap().parse::<u64>().unwrap()
+            gen_task_moves(line.to_string(), true, n)
+                * line.strip_suffix('A').unwrap().parse::<u64>().unwrap()
         })
         .sum()
 }
@@ -45,8 +35,8 @@ fn task2(input: &[String]) -> u64 {
 fn main() -> Result<()> {
     let input = parse_input(&read_to_string("input.txt")?);
 
-    println!("Answer 1: {}", task1(&input));
-    println!("Answer 2: {}", task2(&input));
+    println!("Answer 1: {}", task(&input, 3));
+    println!("Answer 2: {}", task(&input, 26));
 
     Ok(())
 }
@@ -60,7 +50,6 @@ mod tests {
         main()
     }
 
-    //#[ignore]
     #[test]
     fn test1() {
         let s = r"029A
@@ -68,10 +57,8 @@ mod tests {
 179A
 456A
 379A";
-        //let s = r"029A";
         let input = parse_input(s);
 
-        assert_eq!(task1(&input), 126384);
-        task2(&input);
+        assert_eq!(task(&input, 3), 126384);
     }
 }
