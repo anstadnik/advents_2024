@@ -1,49 +1,11 @@
 mod pad;
 use anyhow::Result;
-use pad::{KeyPad, Pos};
+use pad::{KeyPad, KEY_PAD1, KEY_PAD2};
 use std::{fs::read_to_string, iter::repeat_n};
 
 fn parse_input(input: &str) -> Vec<String> {
     input.lines().map(|line| line.to_string()).collect()
 }
-
-const KEY_PAD1: ([(char, Pos); 11], [(Pos, &str); 3]) = (
-    [
-        ('7', Pos { x: 0, y: 0 }),
-        ('8', Pos { x: 1, y: 0 }),
-        ('9', Pos { x: 2, y: 0 }),
-        ('4', Pos { x: 0, y: 1 }),
-        ('5', Pos { x: 1, y: 1 }),
-        ('6', Pos { x: 2, y: 1 }),
-        ('1', Pos { x: 0, y: 2 }),
-        ('2', Pos { x: 1, y: 2 }),
-        ('3', Pos { x: 2, y: 2 }),
-        ('0', Pos { x: 1, y: 3 }),
-        ('A', Pos { x: 2, y: 3 }),
-    ],
-    [
-        (Pos { x: 1, y: 3 }, "<"),
-        (Pos { x: 0, y: 2 }, "v"),
-        (Pos { x: 2, y: 3 }, "<<"),
-    ],
-);
-
-const KEY_PAD2: ([(char, Pos); 5], [(Pos, &str); 3]) = (
-    [
-        ('^', Pos { x: 1, y: 0 }),
-        ('A', Pos { x: 2, y: 0 }),
-        ('<', Pos { x: 0, y: 1 }),
-        ('v', Pos { x: 1, y: 1 }),
-        ('>', Pos { x: 2, y: 1 }),
-    ],
-    [
-        (Pos { x: 0, y: 1 }, "^"),
-        (Pos { x: 1, y: 0 }, "<"),
-        (Pos { x: 2, y: 0 }, "<<"),
-    ],
-);
-
-//trait CloneIter = Iterator + Clone;
 
 fn gen_task_moves(input: &str, keypads: &[KeyPad]) -> String {
     let [first, keypads @ .., last] = keypads else {
@@ -58,20 +20,10 @@ fn gen_task_moves(input: &str, keypads: &[KeyPad]) -> String {
 }
 
 fn task1(input: &[String]) -> u32 {
-    let keypads = [
-        KeyPad::new(&KEY_PAD1.0, &KEY_PAD1.1),
-        KeyPad::new(&KEY_PAD2.0, &KEY_PAD2.1),
-        KeyPad::new(&KEY_PAD2.0, &KEY_PAD2.1),
-    ];
+    let keypads = [KEY_PAD1, KEY_PAD2, KEY_PAD2];
     input
         .iter()
         .map(|line| {
-            //println!(
-            //    "{}, {}",
-            //    gen_task_moves(line).len() as u32,
-            //    line.strip_suffix(['A']).unwrap().parse::<u32>().unwrap()
-            //);
-            println!("{}", gen_task_moves(line, &keypads));
             gen_task_moves(line, &keypads).len() as u32
                 * line.strip_suffix(['A']).unwrap().parse::<u32>().unwrap()
         })
@@ -79,15 +31,13 @@ fn task1(input: &[String]) -> u32 {
 }
 
 fn task2(input: &[String]) -> u32 {
-    let keypads: Vec<_> = [KeyPad::new(&KEY_PAD1.0, &KEY_PAD1.1)]
+    let keypads: Vec<_> = [KEY_PAD1]
         .into_iter()
-        .chain(repeat_n(KeyPad::new(&KEY_PAD2.0, &KEY_PAD2.1), 25))
-        .chain([KeyPad::new(&KEY_PAD2.0, &KEY_PAD2.1)])
+        .chain(repeat_n(KEY_PAD2, 3))
         .collect();
     input
         .iter()
         .map(|line| {
-            println!("{}", gen_task_moves(line, &keypads));
             gen_task_moves(line, &keypads).len() as u32
                 * line.strip_suffix(['A']).unwrap().parse::<u32>().unwrap()
         })
@@ -113,9 +63,9 @@ mod tests {
         let input = "029A";
         println!("{input}");
 
-        let key_pad1 = KeyPad::new(&KEY_PAD1.0, &KEY_PAD1.1);
-        let key_pad2 = KeyPad::new(&KEY_PAD2.0, &KEY_PAD2.1);
-        let key_pad3 = KeyPad::new(&KEY_PAD2.0, &KEY_PAD2.1);
+        let key_pad1 = KEY_PAD1;
+        let key_pad2 = KEY_PAD2;
+        let key_pad3 = KEY_PAD2;
 
         let keys1 = key_pad1.gen_shortest_iter([vec![input.to_string()]].into_iter());
         let ans1 = "<A^A^^>AvvvA";
@@ -148,5 +98,6 @@ mod tests {
         let input = parse_input(s);
 
         assert_eq!(task1(&input), 126384);
+        //task2(&input);
     }
 }
