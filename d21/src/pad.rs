@@ -1,7 +1,4 @@
-use indicatif::{ProgressBar, ProgressIterator};
-use itertools::Itertools;
-
-const DEBUG: bool = false;
+use cached::proc_macro::cached;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Pos {
@@ -9,7 +6,7 @@ pub struct Pos {
     pub y: isize,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub struct KeyPad {
     keys: &'static [(char, Pos)],
     forbidden: &'static [(Pos, &'static str)],
@@ -54,93 +51,44 @@ pub const KEY_PAD2: KeyPad = KeyPad {
     pos: Pos { x: 2, y: 0 },
 };
 
+#[cached]
+fn gen_moves_cached(mut self_: KeyPad, c: char) -> (KeyPad, String) {
+    let Pos { x, y } = self_.get_char(c);
+    let (dx, dy) = (x - self_.pos.x, y - self_.pos.y);
+    let old_pos = self_.pos;
+    self_.pos = Pos { x, y };
+
+    let col_move = ["<", ">"][(dx > 0) as usize].repeat(dx.unsigned_abs());
+    let row_move = ["^", "v"][(dy > 0) as usize].repeat(dy.unsigned_abs());
+
+    (
+        self_,
+        (if self_.is_forbidden(old_pos, &col_move) {
+            row_move + &col_move
+        } else if self_.is_forbidden(old_pos, &row_move) || col_move.starts_with('<') {
+            col_move + &row_move
+        } else {
+            row_move + &col_move
+        }) + "A",
+    )
+}
 impl KeyPad {
-    //pub fn new(keys: &[(char, Pos)], forbidden: &[(Pos, &'static str)]) -> Self {
-    //    Self {
-    //        keys: keys.iter().copied().collect(),
-    //        forbidden: forbidden.iter().cloned().collect(),
-    //        pos: keys.iter().find(|(c, _)| c == &'A').unwrap().1,
-    //    }
-    //}
-
-    pub fn gen_moves<T: Iterator<Item = char> + Clone>(
-        &self,
-        code: T,
-    ) -> impl Iterator<Item = Vec<String>> + use<'_, T> + Clone {
-        //if DEBUG {
-        //    println!("Generating moves for {}", code.clone().collect::<String>());
-        //}
-        code.scan(self.pos, |pos, c| {
-            if DEBUG {
-                println!("{:?}, {:?}", pos, c);
-            }
-            let new_pos @ Pos { x, y } = self.keys.iter().find(|(k, _)| k == &c).unwrap().1;
-            let (dx, dy) = (x - pos.x, y - pos.y);
-            let old_pos = *pos;
-            *pos = new_pos;
-
-            let moves: Vec<_> = [
-                "^".repeat((-dy).max(0) as usize),
-                "v".repeat(dy.max(0) as usize),
-                "<".repeat((-dx).max(0) as usize),
-                ">".repeat(dx.max(0) as usize),
-            ]
-            .into_iter()
-            .filter(|x| !x.is_empty())
-            .collect();
-
-            let n = moves.len();
-            Some([
-                moves
-                    .into_iter()
-                    .permutations(n)
-                    .filter(|v| !v.is_empty())
-                    .filter(|v| {
-                        self.forbidden
-                            .iter()
-                            .all(|(p, c)| !(*p == old_pos && *c == v[0]))
-                    })
-                    .map(|v| v.into_iter().join(""))
-                    .collect(),
-                vec!["A".to_string()],
-            ])
-        })
-        .flatten()
-        .filter(|x| !x.is_empty())
-        .inspect(|x| {
-            if DEBUG {
-                println!("{:?}", x)
-            }
-        })
-        .multi_cartesian_product()
-        .inspect(|x| {
-            if DEBUG {
-                println!("{:?}", x)
-            }
-        })
+    // Add cached
+    fn get_char(&self, c: char) -> Pos {
+        self.keys.iter().find(|(k, _)| k == &c).unwrap().1
     }
 
-    pub fn gen_moves_iter<T: Iterator<Item = Vec<String>>>(
-        &self,
-        codes: T,
-    ) -> impl Iterator<Item = Vec<String>> + use<'_, T> {
-        //if DEBUG {
-        //    println!(
-        //        "Generating moves iter for {:?}",
-        //        codes.clone().collect::<Vec<_>>()
-        //    );
-        //}
-        codes.flat_map(move |code| {
-            self.gen_moves(code.into_iter().flat_map(|x| x.chars().collect::<Vec<_>>()))
-                .collect::<Vec<_>>()
-        })
+    fn is_forbidden(&self, pos: Pos, move_: &str) -> bool {
+        self.forbidden.iter().any(|el| el == &(pos, move_))
     }
 
-    pub fn gen_shortest_iter<T: Iterator<Item = Vec<String>>>(&self, codes: T) -> String {
-        self.gen_moves_iter(codes)
-            .progress_with(ProgressBar::new_spinner())
-            .min_by_key(|x| x.iter().map(|x| x.len()).sum::<usize>())
-            .unwrap()
-            .join("")
+    pub fn gen_moves(&mut self, c: char) -> String {
+        let (self_, moves) = gen_moves_cached(*self, c);
+        *self = self_;
+        moves
+    }
+
+    pub fn gen_moves_str(mut self, s: Box<dyn Iterator<Item = char> + '_>) -> Box<dyn Iterator<Item = char> + '_> {
+        Box::new(s.flat_map(move |c| self.gen_moves(c).chars().collect::<Vec<_>>()))
     }
 }
