@@ -72,7 +72,6 @@ fn main() -> Result<()> {
 mod tests {
     use super::*;
 
-    #[ignore]
     #[test]
     fn test_main() -> Result<()> {
         main()
