@@ -1,6 +1,5 @@
 use anyhow::Result;
-use indicatif::ParallelProgressIterator;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::{collections::HashMap, fs::read_to_string, iter::successors};
 
 type N = i64;
@@ -36,22 +35,16 @@ fn task2(input: &[N], n: usize, thr: usize) -> N {
         .map(|v| v.windows(2).map(|w| w[1] - w[0]).collect())
         .collect();
 
-    //let options: HashSet<_> = diffs.iter().flat_map(|v| v.windows(4)).collect();
-    let options: Vec<_> = diffs
+    diffs
         .iter()
         .flat_map(|v| v.windows(4))
         .fold(HashMap::new(), |mut acc, w| {
-            acc.entry(w).and_modify(|e| *e += 1).or_insert(1);
+            *acc.entry(w).or_insert(0) += 1;
             acc
         })
-        .into_iter()
-        .filter_map(|(k, v)| (v >= thr).then_some(k))
-        .collect();
-
-    options
-        .par_iter()
-        .progress()
-        .map(|&opt| {
+        .into_par_iter()
+        .filter(|&(_, v)| v >= thr)
+        .map(|(opt, _)| {
             diffs
                 .iter()
                 .zip(&secrets)
