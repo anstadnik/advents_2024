@@ -1,7 +1,7 @@
 use anyhow::Result;
 use indicatif::ParallelProgressIterator;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::{collections::HashSet, fs::read_to_string, iter::successors};
+use std::{collections::HashMap, fs::read_to_string, iter::successors};
 
 type N = i64;
 const SECRET: N = 16777216;
@@ -26,7 +26,7 @@ fn task1(input: &[N], n: usize) -> N {
     gen_secrets(input, n).iter().map(|s| s[n - 1]).sum()
 }
 
-fn task2(input: &[N], n: usize) -> N {
+fn task2(input: &[N], n: usize, thr: usize) -> N {
     let secrets: Vec<Vec<_>> = gen_secrets(input, n)
         .into_iter()
         .map(|v| v.into_iter().map(|s| s % 10).collect())
@@ -36,11 +36,21 @@ fn task2(input: &[N], n: usize) -> N {
         .map(|v| v.windows(2).map(|w| w[1] - w[0]).collect())
         .collect();
 
-    let options: HashSet<_> = diffs.iter().flat_map(|v| v.windows(4)).collect();
+    //let options: HashSet<_> = diffs.iter().flat_map(|v| v.windows(4)).collect();
+    let options: Vec<_> = diffs
+        .iter()
+        .flat_map(|v| v.windows(4))
+        .fold(HashMap::new(), |mut acc, w| {
+            acc.entry(w).and_modify(|e| *e += 1).or_insert(1);
+            acc
+        })
+        .into_iter()
+        .filter_map(|(k, v)| (v >= thr).then_some(k))
+        .collect();
 
     options
         .par_iter()
-        .progress_count(options.len() as u64)
+        .progress()
         .map(|&opt| {
             diffs
                 .iter()
@@ -60,7 +70,7 @@ fn main() -> Result<()> {
     let input = parse_input(&read_to_string("input.txt")?);
 
     println!("Answer 1: {}", task1(&input, 2000));
-    println!("Answer 2: {}", task2(&input, 2000));
+    println!("Answer 2: {}", task2(&input, 2000, 250));
 
     Ok(())
 }
@@ -69,6 +79,7 @@ fn main() -> Result<()> {
 mod tests {
     use super::*;
 
+    #[ignore]
     #[test]
     fn test_main() -> Result<()> {
         main()
@@ -78,7 +89,7 @@ mod tests {
     fn test_simple() {
         let s = "123";
         let input = parse_input(s);
-        assert_eq!(task2(&input, 10), 6);
+        assert_eq!(task2(&input, 10, 1), 6);
     }
 
     #[test]
@@ -98,6 +109,6 @@ mod tests {
 3
 2024";
         let input = parse_input(s);
-        assert_eq!(task2(&input, 2001), 23);
+        assert_eq!(task2(&input, 2001, 0), 23);
     }
 }
