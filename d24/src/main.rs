@@ -2,13 +2,12 @@ mod parse;
 mod tests;
 
 use anyhow::{bail, Result};
-use indicatif::ProgressIterator;
+use indicatif::{MultiProgress, ParallelProgressIterator, ProgressBar, ProgressIterator, ProgressStyle};
 use parse::{parse_intput, Ops, State};
-use std::{collections::HashMap, fs::read_to_string, mem::swap};
+use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
+use std::{collections::HashMap, fs::read_to_string, mem::swap, sync::Mutex};
 
-fn execute<'a>(mut wires: State<'a>, ops: &'a Ops<'a>) -> Result<State<'a>> {
-    let mut ops = ops.clone();
-
+fn execute<'a>(mut wires: State<'a>, mut ops: Ops<'a>) -> Result<State<'a>> {
     while !ops.is_empty() {
         let n = ops.len();
         ops.retain(|(a, op, b, c)| {
@@ -28,7 +27,7 @@ fn execute<'a>(mut wires: State<'a>, ops: &'a Ops<'a>) -> Result<State<'a>> {
 }
 
 type N = i64;
-fn task1(init: State, ops: &Ops) -> Result<N> {
+fn task1<'a>(init: State<'a>, ops: Ops<'a>) -> Result<N> {
     let wires = execute(init, ops)?;
     let mut v: Vec<_> = wires
         .into_iter()
@@ -39,7 +38,7 @@ fn task1(init: State, ops: &Ops) -> Result<N> {
     Ok(v.into_iter().fold(0, |acc, (_, v)| acc * 2 + v as N))
 }
 
-fn test_task_2_(mut init: State, x: N, y: N, ops: &Ops) -> Result<bool> {
+fn test_task_2_<'a>(mut init: State<'a>, x: N, y: N, ops: Ops<'a>) -> Result<bool> {
     let n_bits = init.len() / 2;
     for i in 0..n_bits {
         *init.get_mut(format!("x{i:02}").as_str()).unwrap() = (x >> i) & 1 == 1
@@ -51,13 +50,13 @@ fn test_task_2_(mut init: State, x: N, y: N, ops: &Ops) -> Result<bool> {
     //Ok(task1(init, ops)? == x & y)
 }
 
-fn find_fault_bit_task_2(init: State, ops: &Ops) -> Option<usize> {
+fn find_fault_bit_task_2<'a>(init: State<'a>, ops: &Ops<'a>) -> Option<usize> {
     (0..init.len() / 2).find(|&i| {
         let x = (1 << i) - 1;
         let y = 1;
         //let x = 1 << i;
         //let y = 1 << i;
-        !test_task_2_(init.clone(), x, y, ops).unwrap_or(false)
+        !test_task_2_(init.clone(), x, y, ops.clone()).unwrap_or(false)
     })
 }
 
@@ -87,77 +86,105 @@ fn gen_dependencies<'a>(ops: &Ops<'a>) -> HashMap<usize, Vec<&'a str>> {
 
 fn task2_<'a>(
     init: State<'a>,
-    ops: &Ops<'a>,
+    ops: Ops<'a>,
     prev_faulty_bit: Option<usize>,
     deps: &HashMap<usize, Vec<&'a str>>,
-) -> Result<Option<Vec<&'a str>>> {
-    let mut ops = ops.clone();
+    swaps: Vec<(&'a str, &'a str)>,
+    multi_progress: &Mutex<MultiProgress>,
+) -> Option<Vec<Vec<&'a str>>> {
+    //let mut ops = ops.clone();
     if let Some(faulty_bit) = find_fault_bit_task_2(init.clone(), &ops) {
-        if prev_faulty_bit.is_some_and(|prev_| faulty_bit <= prev_) {
-            return Ok(None);
+        if swaps.len() >= 4 || prev_faulty_bit.is_some_and(|prev_| faulty_bit <= prev_) {
+            return None;
         }
 
-        println!(
-            "Faulty bit: {}, prev_faulty_bit: {:?}",
-            faulty_bit, prev_faulty_bit
-        );
         let deps_ = deps.get(&faulty_bit).unwrap();
-        // TODO: Do I need ..= ?
-        let deps_to_ignore: Vec<_> = (0..=faulty_bit)
+        let deps_to_ignore: Vec<_> = (0..faulty_bit)
             .flat_map(|i| deps.get(&i).unwrap())
             .copied()
             .collect();
-        println!("Dependencies: {:?}", deps_);
         let deps_is: Vec<_> = deps_
             .iter()
             .map(|v| ops.iter().position(|a| &a.3 == v).unwrap())
             .collect();
 
-        for mut i in deps_is.into_iter().progress() {
-            for mut j in 0..ops.len() {
-                if j == i || deps_to_ignore.contains(&ops[j].3) {
-                    //if j == i {
-                    continue;
-                }
+        let prefix = format!(
+            "Faulty bit: {faulty_bit}, prev: {prev_faulty_bit:?}, n swaps: {}",
+            swaps.len()
+        );
+        let style = ProgressStyle::default_bar()
+            .template("{prefix} {wide_bar} {pos}/{len}")
+            .unwrap();
+        let progress = multi_progress.lock().unwrap().add(
+            ProgressBar::new((ops.len() * deps_is.len()) as u64)
+                .with_prefix(prefix)
+                .with_style(style),
+        );
+        Some(
+            deps_is
+                //.into_par_iter()
+                //.flat_map(|i| (0..ops.len()).par_bridge().map(move |j| (i, j)))
+                .into_iter()
+                .flat_map(|i| (0..ops.len()).map(move |j| (i, j)))
+                .progress_with(progress.clone())
+                .filter_map(|(mut i, mut j)| {
+                    let mut ops = ops.clone();
+                    if j == i || deps_to_ignore.contains(&ops[j].3) {
+                        return None;
+                    }
 
-                if j < i {
-                    swap(&mut j, &mut i);
-                }
-                //println!("Swapping {} and {}", i, j);
+                    if j < i {
+                        swap(&mut j, &mut i);
+                    }
 
-                let (a, b) = ops.split_at_mut(j);
-                swap(&mut a[i].3, &mut b[0].3);
+                    let (a, b) = ops.split_at_mut(j);
+                    swap(&mut a[i].3, &mut b[0].3);
 
-                if let Ok(Some(mut v)) = task2_(init.clone(), &ops, Some(faulty_bit), deps) {
-                    v.extend([ops[i].3, ops[j].3]);
-                    return Ok(Some(v));
-                }
+                    let mut swaps = swaps.clone();
+                    swaps.push((a[i].3, b[0].3));
+                    let init = init.clone();
+                    let ret = task2_(init, ops, Some(faulty_bit), deps, swaps, multi_progress);
 
-                let (a, b) = ops.split_at_mut(j);
-                swap(&mut a[i].3, &mut b[0].3);
-            }
-        }
-        Ok(None)
+                    ret
+                })
+                .flatten()
+                .collect(),
+        )
     } else {
-        Ok(Some(Vec::new()))
+        let mut v: Vec<_> = swaps.iter().flat_map(|&(a, b)| [a, b]).collect();
+        v.sort_unstable();
+        let _ = multi_progress
+            .lock()
+            .unwrap()
+            .println(format!("Pushing {:?}", v.join(",")));
+        Some(vec![v])
     }
 }
 
-fn task2(init: State, ops: &Ops) -> Result<String> {
-    let deps = gen_dependencies(ops);
-    task2_(init, ops, None, &deps).map(|v| {
-        let mut v = v.unwrap();
-        v.sort_unstable();
-        v.join(",")
-    })
+fn task2<'a>(init: State<'a>, ops: Ops<'a>) -> Result<Vec<String>> {
+    let deps = gen_dependencies(&ops);
+
+    Ok(task2_(
+        init,
+        ops,
+        None,
+        &deps,
+        Default::default(),
+        &Mutex::new(MultiProgress::new()),
+    )
+    .unwrap()
+    .iter()
+    .filter(|v| v.len() == 8)
+    .map(|v| v.join(","))
+    .collect())
 }
 
 fn main() -> Result<()> {
     let s = read_to_string("input.txt")?;
     let (init, ops) = parse_intput(s.trim())?;
 
-    println!("Answer 1: {}", task1(init.clone(), &ops)?);
-    println!("Answer 2: {}", task2(init, &ops)?);
+    println!("Answer 1: {}", task1(init.clone(), ops.clone())?);
+    println!("Answer 2: {:?}", task2(init, ops)?);
 
     Ok(())
 }
