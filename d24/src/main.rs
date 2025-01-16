@@ -2,7 +2,8 @@ mod parse;
 mod tests;
 
 use anyhow::{bail, Result};
-use indicatif::{MultiProgress, ParallelProgressIterator, ProgressBar, ProgressIterator, ProgressStyle};
+use indicatif::{MultiProgress, ParallelProgressIterator, ProgressBar, ProgressStyle};
+use itertools::Itertools;
 use parse::{parse_intput, Ops, State};
 use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use std::{collections::HashMap, fs::read_to_string, mem::swap, sync::Mutex};
@@ -11,12 +12,11 @@ fn execute<'a>(mut wires: State<'a>, mut ops: Ops<'a>) -> Result<State<'a>> {
     while !ops.is_empty() {
         let n = ops.len();
         ops.retain(|(a, op, b, c)| {
-            if let Some((a, b)) = wires.get(a).zip(wires.get(b)) {
-                wires.insert(*c, op.apply(*a, *b));
-                false
-            } else {
-                true
-            }
+            || -> Option<()> {
+                wires.insert(*c, op.apply(*wires.get(a)?, *wires.get(b)?));
+                Some(())
+            }()
+            .is_none()
         });
         if ops.len() == n {
             bail!("No progress");
@@ -122,10 +122,10 @@ fn task2_<'a>(
         );
         Some(
             deps_is
-                //.into_par_iter()
-                //.flat_map(|i| (0..ops.len()).par_bridge().map(move |j| (i, j)))
-                .into_iter()
-                .flat_map(|i| (0..ops.len()).map(move |j| (i, j)))
+                .into_par_iter()
+                .flat_map(|i| (0..ops.len()).par_bridge().map(move |j| (i, j)))
+                //.into_iter()
+                //.flat_map(|i| (0..ops.len()).map(move |j| (i, j)))
                 .progress_with(progress.clone())
                 .filter_map(|(mut i, mut j)| {
                     let mut ops = ops.clone();
@@ -161,8 +161,11 @@ fn task2_<'a>(
     }
 }
 
-fn task2<'a>(init: State<'a>, ops: Ops<'a>) -> Result<Vec<String>> {
+fn task2<'a>(mut init: State<'a>, mut ops: Ops<'a>) -> Result<Vec<String>> {
     let deps = gen_dependencies(&ops);
+    init.reserve(ops.len());
+    let order = gen_dependencies(&ops).into_values().kmerge().collect_vec();
+    ops.sort_unstable_by_key(|(_, _, _, c)| order.iter().position(|v| v == c).unwrap());
 
     Ok(task2_(
         init,
@@ -170,7 +173,7 @@ fn task2<'a>(init: State<'a>, ops: Ops<'a>) -> Result<Vec<String>> {
         None,
         &deps,
         Default::default(),
-        &Mutex::new(MultiProgress::new()),
+        &Default::default(),
     )
     .unwrap()
     .iter()

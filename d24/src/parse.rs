@@ -1,5 +1,6 @@
+use fxhash::FxHashMap as HashMap;
 use anyhow::{anyhow, Result};
-use std::collections::HashMap;
+//use std::collections::HashMap;
 use winnow::ascii::{alphanumeric1, dec_int};
 use winnow::combinator::{empty, fail, separated};
 use winnow::{dispatch, seq, PResult, Parser};
