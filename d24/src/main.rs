@@ -8,6 +8,8 @@ use parse::{parse_intput, Ops, State};
 use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use std::{collections::HashMap, fs::read_to_string, mem::swap, sync::Mutex};
 
+const RUN_AND: bool = false;
+
 fn execute<'a>(mut wires: State<'a>, mut ops: Ops<'a>) -> Result<State<'a>> {
     while !ops.is_empty() {
         let n = ops.len();
@@ -46,17 +48,17 @@ fn test_task_2_<'a>(mut init: State<'a>, x: N, y: N, ops: Ops<'a>) -> Result<boo
     for i in 0..n_bits {
         *init.get_mut(format!("y{i:02}").as_str()).unwrap() = (y >> i) & 1 == 1
     }
-    Ok(task1(init, ops)? == x + y)
-    //Ok(task1(init, ops)? == x & y)
+    Ok(task1(init, ops)? == if RUN_AND { x & y } else { x + y })
 }
 
 fn find_fault_bit_task_2<'a>(init: State<'a>, ops: &Ops<'a>) -> Option<usize> {
     (0..init.len() / 2).find(|&i| {
-        let x = (1 << i) - 1;
-        let y = 1;
-        //let x = 1 << i;
-        //let y = 1 << i;
-        !test_task_2_(init.clone(), x, y, ops.clone()).unwrap_or(false)
+        let (x, y) = if RUN_AND {
+            ((1 << i) - 1, 1)
+        } else {
+            (1 << i, 1 << i)
+        };
+        test_task_2_(init.clone(), x, y, ops.clone()).unwrap_or(false)
     })
 }
 
