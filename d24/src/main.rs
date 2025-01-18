@@ -54,9 +54,9 @@ fn test_task_2_<'a>(mut init: State<'a>, x: N, y: N, ops: Ops<'a>) -> Result<boo
 fn find_fault_bit_task_2<'a>(init: State<'a>, ops: &Ops<'a>) -> Option<usize> {
     (0..init.len() / 2).find(|&i| {
         let (x, y) = if RUN_AND {
-            ((1 << i) - 1, 1)
-        } else {
             (1 << i, 1 << i)
+        } else {
+            ((1 << i) - 1, 1)
         };
         test_task_2_(init.clone(), x, y, ops.clone()).unwrap_or(false)
     })
@@ -155,10 +155,10 @@ fn task2_<'a>(
     } else {
         let mut v: Vec<_> = swaps.iter().flat_map(|&(a, b)| [a, b]).collect();
         v.sort_unstable();
-        let _ = multi_progress
-            .lock()
-            .unwrap()
-            .println(format!("Pushing {:?}", v.join(",")));
+        //let _ = multi_progress
+        //    .lock()
+        //    .unwrap()
+        //    .println(format!("Pushing {:?}", v.join(",")));
         Some(vec![v])
     }
 }
