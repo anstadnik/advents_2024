@@ -58,7 +58,7 @@ fn find_fault_bit_task_2<'a>(init: State<'a>, ops: &Ops<'a>) -> Option<usize> {
         } else {
             ((1 << i) - 1, 1)
         };
-        test_task_2_(init.clone(), x, y, ops.clone()).unwrap_or(false)
+        !test_task_2_(init.clone(), x, y, ops.clone()).unwrap_or(false)
     })
 }
 
